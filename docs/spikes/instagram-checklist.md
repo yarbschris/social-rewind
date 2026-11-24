@@ -5,8 +5,12 @@
 - ✅ **Filtered taps reloaded the page** when they redirected (comments, search). Fixed: in-app navigation to filtered pages is now inert.
 - ✅ **The search tab goes to `/explore/`.** Kept reachable for account search, with post tiles hidden.
 - ✅ **Swiping on from a reel shared in DMs shows further reels, each one matched by `blockReels`.** Decision: a shared reel may open, but you can't scroll on to more (`hideAllButFirst` on reel routes). Still to verify: the path when a shared reel opens, and the reel container markup.
-- ⬜ Suggested-accounts section: not matched yet. Need `inspect('Suggested for you')` output.
-- ⬜ Identity (username) detection: "no" on a DM page. Check on Home.
+- ✅ **"Suggested for you" always sat inside an `article`** (3 of 3 on Home), and `hideSuggested.dom0` caught each one. The separate carousel rule matched nothing, so it was removed.
+- ✅ Post counter counts on Home (7 posts). `a[href="/"]`, `/explore/`, `/reels/` and `/direct/inbox/` each appear once (the nav bar).
+- ✅ `blockAds.dom0` matched 1 article on Home. Still to confirm: was it an actual ad?
+- ❌ **Comment buttons:** `hideComments` matched nothing on Home.
+- ❌ **Stories tray:** `hideStories` matched nothing.
+- ❌ **Identity:** not detected with `[role=navigation]`. Rev 5 searches inside the nav bar (the common ancestor of the Home and Inbox links). Needs re-checking.
 
 Run on a physical iPhone with a development build. Turn on **Settings → Developer → Filter debug overlay** so hidden elements are outlined instead of removed.
 

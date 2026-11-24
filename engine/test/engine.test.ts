@@ -79,3 +79,20 @@ describe("platform hosts", () => {
     off();
   });
 });
+
+describe("identity via nav-bar scope", () => {
+  const def = loadPack("instagram").identity!;
+  const nav = (profileHref: string) =>
+    `<main><article><a href="/stranger/">x</a></article></main>` +
+    `<div><a href="/">Home</a><a href="/explore/">Search</a><a href="/reels/">Reels</a><a href="/direct/inbox/">DMs</a><a href="${profileHref}">Profile</a></div>`;
+
+  it("finds the profile link next to Home and Inbox, ignoring feed links and nav routes", () => {
+    document.body.innerHTML = nav("/me.the_user/");
+    expect(resolveIdentity(def)).toBe("me.the_user");
+  });
+
+  it("returns null when the nav bar isn't there", () => {
+    document.body.innerHTML = '<main><a href="/stranger/">x</a></main>';
+    expect(resolveIdentity(def)).toBeNull();
+  });
+});

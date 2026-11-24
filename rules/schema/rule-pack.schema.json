@@ -457,6 +457,13 @@
         },
         "pattern": {
           "$ref": "#/$defs/regex"
+        },
+        "scope": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/selector"
+          }
         }
       }
     }

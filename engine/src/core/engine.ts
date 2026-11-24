@@ -110,12 +110,25 @@ export interface IsolatedDeps {
   counter?: CounterDeps;
 }
 
+/** Lowest common ancestor of the first match of each selector, or null if any is missing. */
+export function commonAncestor(selectors: string[], root: ParentNode = document): Element | null {
+  const els = selectors.map((s) => root.querySelector(s));
+  if (els.some((e) => !e)) return null;
+  let a: Element | null = els[0]!;
+  while (a && !els.every((e) => a!.contains(e))) a = a.parentElement;
+  return a;
+}
+
 export function resolveIdentity(def: IdentityDef, root: ParentNode = document): string | null {
   try {
-    const value = root.querySelector(def.selector)?.getAttribute(def.attr);
-    if (!value) return null;
-    const u = new RegExp(def.pattern).exec(value)?.[1] ?? null;
-    return u && USERNAME_RE.test(u) ? u : null;
+    const scope = def.scope?.length ? commonAncestor(def.scope, root) : root;
+    if (!scope) return null;
+    const pattern = new RegExp(def.pattern);
+    for (const el of scope.querySelectorAll(def.selector)) {
+      const u = pattern.exec(el.getAttribute(def.attr) ?? "")?.[1];
+      if (u && USERNAME_RE.test(u)) return u;
+    }
+    return null;
   } catch {
     return null;
   }

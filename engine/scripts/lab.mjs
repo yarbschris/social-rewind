@@ -72,7 +72,12 @@ function labRuntime(config) {
         active,
         kind: r.type,
         matches: count(`[data-sr-hidden="${id}"]`),
-        target: r.type === "hideIfText" ? `${r.container} ∋ ${JSON.stringify(r.text)}` : `${r.match} → ${r.closest}`,
+        target:
+          r.type === "hideIfText"
+            ? `${r.container} ∋ ${JSON.stringify(r.text)}`
+            : r.type === "hideAllButFirst"
+              ? `all but first ${r.selector}`
+              : `${r.match} → ${r.closest}`,
       });
     });
     return rows;
@@ -162,20 +167,40 @@ function labRuntime(config) {
         cssRules = null;
       }
       let username = null;
-      if (pack.identity) {
+      const id = pack.identity;
+      if (id) {
         try {
-          const v = document.querySelector(pack.identity.selector)?.getAttribute(pack.identity.attr);
-          username = v ? (new RegExp(pack.identity.pattern).exec(v)?.[1] ?? null) : null;
+          let scope = document;
+          if (id.scope?.length) {
+            const els = id.scope.map((s) => document.querySelector(s));
+            if (els.some((e) => !e)) scope = null;
+            else {
+              let a = els[0];
+              while (a && !els.every((e) => a.contains(e))) a = a.parentElement;
+              scope = a;
+            }
+          }
+          const re = new RegExp(id.pattern);
+          for (const el of scope ? scope.querySelectorAll(id.selector) : []) {
+            const u = re.exec(el.getAttribute(id.attr) ?? "")?.[1];
+            if (u) {
+              username = u;
+              break;
+            }
+          }
+          if (!scope) username = "no (nav anchors not found)";
         } catch {
           username = "INVALID selector";
         }
       }
+      // Don't print the username itself: the output gets pasted into chats.
+      const usernameSummary = !username ? "no" : username.startsWith("no (") || username.startsWith("INVALID") ? username : `yes (${username.length} characters, starts with "${username[0]}")`;
       console.log(
         "%cSocial Rewind lab",
         "font-weight:bold",
         `\n  path: ${document.documentElement.getAttribute("data-sr-path") ?? location.pathname}` +
           `\n  style sheet applied: ${cssRules ? `yes (${cssRules} rules)` : "NO (blocked by the site's Content-Security-Policy?)"}` +
-          `\n  username detected: ${username ?? "no"}` +
+          `\n  username detected: ${usernameSummary}` +
           `\n  posts counted: ${window.SocialRewind?.postsViewed?.() ?? "n/a"}` +
           `\n  articles on page: ${count("article")}`,
       );

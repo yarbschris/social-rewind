@@ -2,7 +2,7 @@
   "$schema": "./schema/rule-pack.schema.json",
   "schemaVersion": 1,
   "platform": "instagram",
-  "revision": 4,
+  "revision": 5,
   "minEngineVersion": 1,
   "startPath": "/",
   "alwaysAllowRoutes": [
@@ -198,13 +198,6 @@
               "Suggested for you",
               "Suggested posts"
             ]
-          },
-          {
-            "type": "hideIfText",
-            "container": "main div:has(> div > a[href^=\"/explore/people/\"])",
-            "text": [
-              "Suggested for you"
-            ]
           }
         ],
         "network": [
@@ -315,8 +308,12 @@
     "minVisibleMs": 1000
   },
   "identity": {
-    "selector": "[role=\"navigation\"] a[href^=\"/\"]:has(img[alt$=\"profile picture\"])",
+    "scope": [
+      "a[href=\"/\"]",
+      "a[href=\"/direct/inbox/\"]"
+    ],
+    "selector": "a[href]",
     "attr": "href",
-    "pattern": "^/([A-Za-z0-9._]+)/$"
+    "pattern": "^/(?!(?:explore|reels|direct|create|accounts|stories|p|reel)/)([A-Za-z0-9._]+)/$"
   }
 }

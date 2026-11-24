@@ -163,7 +163,12 @@ export interface CounterDef {
 }
 
 export interface IdentityDef {
-  /** Element whose attribute reveals the logged-in username. */
+  /**
+   * Optional anchors (selectors). When given, the search is limited to their lowest
+   * common ancestor, e.g. the nav bar containing both the Home and Inbox links.
+   */
+  scope?: string[];
+  /** Candidate elements; the first whose attribute matches `pattern` wins. */
   selector: string;
   attr: string;
   /** Regex with one capture group for the username. */

@@ -10,7 +10,7 @@ An open-source (Apache-2.0) iOS app that blocks social media apps through Apple'
 - Never commit captured page fixtures that contain real personal data. `engine/test/fixtures/**/raw/` is gitignored. Scrub fixtures before moving them out of it.
 
 ## Layout
-- `engine/`: TypeScript filter engine, built by esbuild into **two** bundles injected at document start: `social-rewind-page.js` (page world: history + fetch/XHR patches only, no bridge, no globals) and `social-rewind-isolated.js` (isolated `WKContentWorld` "SocialRewind": CSS/DOM, counter, identity, bridge). Native passes config by closure. Shared with Android later. `pnpm test`, `pnpm build`, `pnpm typecheck`.
+- `engine/`: TypeScript filter engine, built by esbuild into **two** bundles injected at document start: `social-rewind-page.js` (page world: history + fetch/XHR patches only, no bridge, no globals) and `social-rewind-isolated.js` (isolated `WKContentWorld` "SocialRewind": CSS/DOM, counter, identity, bridge). Native passes config by closure. Shared with Android later. `pnpm test`, `pnpm build`, `pnpm typecheck`. **Run `scripts/test-all.sh` after any change to `rules/`**, since the Swift tests read the packs too.
 - `rules/`: one rule pack per platform (`instagram.json`), validated against `rules/schema/rule-pack.schema.json`.
 - `ios/`: XcodeGen spec `project.yml`, app target `SocialRewind`, extensions under `Extensions/`, and pure-Swift logic in the local package `Packages/RewindCore` (testable with `swift test`, no Xcode needed).
 - `docs/decisions/`: ADRs. Add one for any significant decision.

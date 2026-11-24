@@ -54,4 +54,4 @@ Captured HTML or JSON from your own account can contain names, messages and phot
 
 ## Commits
 
-Small, focused commits. Run `pnpm test` (engine) and `swift test` (`ios/Packages/RewindCore`) before opening a PR.
+Small, focused commits. Run `scripts/test-all.sh` (engine, rule validation and RewindCore) before opening a PR. Rule packs are read by both the engine and the Swift code, so a rules change must pass both.

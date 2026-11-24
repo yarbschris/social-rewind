@@ -310,12 +310,15 @@ private func pack(revision: Int = 1, minEngine: Int = 1, platform: String = "ins
         let g = guarded()
         #expect(g.evaluate(path: "/") == .allow)
         #expect(g.evaluate(path: "/direct/inbox/") == .allow)
-        // blockReels (default on) has a "block" rule for /reel/<id>
-        #expect(g.evaluate(path: "/reel/abc/") == .navigate("/"))
-        #expect(g.evaluate(path: "/someone/reel/abc/") == .navigate("/"))
+        // A single reel (e.g. one sent in DMs) may open; the engine hides the reels after it.
+        #expect(g.evaluate(path: "/reel/abc/") == .allow)
+        #expect(g.evaluate(path: "/someone/reel/abc/") == .allow)
         // "redirect" rules are the engine's job
         #expect(g.evaluate(path: "/reels/") == .allow)
-        #expect(guarded("normal", ["blockReels": false]).evaluate(path: "/reel/abc/") == .allow)
+        // hideComments has a "block" rule for the comments page
+        #expect(g.evaluate(path: "/p/abc/comments/") == .allow)
+        #expect(guarded("normal", ["hideComments": true]).evaluate(path: "/p/abc/comments/") == .navigate("/"))
+        #expect(guarded("normal", ["blockExplore": true]).evaluate(path: "/explore/tags/cats/") == .navigate("/"))
     }
 
     @Test func alwaysAllowRoutesWin() {

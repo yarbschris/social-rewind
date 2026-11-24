@@ -1,5 +1,15 @@
 import { compile } from "../src/core/compile";
-import { evaluateRoute } from "../src/core/router";
+import {
+  allowForcedNavigation,
+  evaluateRoute,
+  installRouter,
+  isSafePath,
+  LOOP_LIMIT,
+  LOOP_WINDOW_MS,
+  resetLoopBreaker,
+  type RouterHandle,
+} from "../src/core/router";
+import type { BridgeEvent } from "../src/core/types";
 import { config, settings } from "./helpers";
 
 const normal = compile(config());
@@ -64,5 +74,121 @@ describe("evaluateRoute (instagram)", () => {
   it("Saved only without a known username: stays on / until identity resolves", () => {
     expect(evaluateRoute("/", savedUnknown).action).toBe("allow");
     expect(evaluateRoute("/direct/inbox/", savedUnknown)).toMatchObject({ action: "redirect", to: "/" });
+  });
+});
+
+describe("evaluateRoute: anchoring and safety", () => {
+  it("doesn't catch profiles whose names start with blocked words", () => {
+    expect(evaluateRoute("/reelsfan/", normal).action).toBe("allow");
+    expect(evaluateRoute("/reel/", normal).action).toBe("allow"); // a profile named "reel"
+    expect(evaluateRoute("/storiesbyme/", withComments).action).toBe("allow");
+    expect(evaluateRoute("/two_factorx/", dms).action).not.toBe("allow");
+  });
+
+  it("allows site interstitials even inside modes", () => {
+    expect(evaluateRoute("/consent/", dms).action).toBe("allow");
+    expect(evaluateRoute("/terms/unblock/", saved).action).toBe("allow");
+  });
+
+  it("percent-encodes capture groups so they can't build a new host", () => {
+    expect(evaluateRoute("/p/a%2F%2Fevil/comments/", withComments)).toMatchObject({ to: "/p/a%252F%252Fevil/" });
+  });
+
+  it("refuses redirect targets that would leave the origin", () => {
+    const evil = compile(config());
+    evil.routes.unshift({ id: "evil", pattern: /^\/x/, action: "redirect", to: "//evil.example/" });
+    expect(evaluateRoute("/x/", evil)).toMatchObject({ action: "block", reason: "evil:unsafe-target" });
+  });
+
+  it.each(["//evil.example", "/\\evil.example", "/a\\b", "https://evil.example/", "/ok/../x\u0000"])("isSafePath rejects %j", (p) => {
+    expect(isSafePath(p)).toBe(false);
+  });
+
+  it.each(["/", "/direct/inbox/", "/alice/saved/", "/p/ABC/?x=1"])("isSafePath accepts %j", (p) => {
+    expect(isSafePath(p)).toBe(true);
+  });
+});
+
+describe("loop breaker", () => {
+  beforeEach(() => resetLoopBreaker());
+
+  it(`allows ${LOOP_LIMIT} forced navigations per window, then refuses`, () => {
+    const t = 1_000_000;
+    for (let i = 0; i < LOOP_LIMIT; i++) expect(allowForcedNavigation(t + i)).toBe(true);
+    expect(allowForcedNavigation(t + 10)).toBe(false);
+    expect(allowForcedNavigation(t + LOOP_WINDOW_MS + 100)).toBe(true);
+  });
+
+  it("persists across reloads via sessionStorage", () => {
+    const t = 2_000_000;
+    for (let i = 0; i < LOOP_LIMIT; i++) allowForcedNavigation(t + i);
+    expect(JSON.parse(sessionStorage.getItem("socialRewind.forcedNavs")!)).toHaveLength(LOOP_LIMIT);
+  });
+});
+
+describe("installRouter", () => {
+  let handle: RouterHandle | null = null;
+  let navs: Array<[string, string]>;
+  let events: BridgeEvent[];
+
+  const install = (rules = normal) => {
+    navs = [];
+    events = [];
+    handle = installRouter(() => rules, {
+      onPathChange: () => {},
+      report: (e) => events.push(e),
+      assign: (h) => navs.push(["assign", h]),
+      replace: (h) => navs.push(["replace", h]),
+    });
+  };
+
+  beforeEach(() => {
+    resetLoopBreaker();
+    history.replaceState(null, "", "/");
+  });
+  afterEach(() => {
+    handle?.uninstall();
+    handle = null;
+  });
+
+  it("pushState redirects use assign, so Back returns to where the user was", () => {
+    install();
+    history.pushState(null, "", "/explore/");
+    expect(navs).toEqual([["assign", "https://www.instagram.com/explore/search/"]]);
+    expect(location.pathname).toBe("/");
+  });
+
+  it("pushState to a blocked route is swallowed and reported", () => {
+    install();
+    history.pushState(null, "", "/reel/XYZ/");
+    expect(location.pathname).toBe("/");
+    expect(navs).toEqual([]);
+    expect(events[0]).toMatchObject({ type: "routeBlocked", path: "/reel/XYZ/" });
+  });
+
+  it("allowed pushState goes through", () => {
+    install();
+    history.pushState(null, "", "/direct/inbox/");
+    expect(location.pathname).toBe("/direct/inbox/");
+  });
+
+  it("mode-blocked link clicks are inert rather than reloading to the mode home", () => {
+    history.replaceState(null, "", "/direct/t/1/");
+    install(dms);
+    const a = document.createElement("a");
+    a.href = "/bob/";
+    document.body.appendChild(a);
+    const ev = new MouseEvent("click", { bubbles: true, cancelable: true, button: 0 });
+    a.dispatchEvent(ev);
+    expect(ev.defaultPrevented).toBe(true);
+    expect(navs).toEqual([]);
+    a.remove();
+  });
+
+  it("stops forcing navigation when it detects a loop", () => {
+    install();
+    for (let i = 0; i < LOOP_LIMIT + 2; i++) history.pushState(null, "", "/reels/");
+    expect(navs).toHaveLength(LOOP_LIMIT);
+    expect(events.some((e) => e.type === "error" && /loop/.test(e.message))).toBe(true);
   });
 });

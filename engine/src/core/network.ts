@@ -20,10 +20,13 @@ function absolute(url: string | URL): string {
 
 const URL_KEY = Symbol("socialRewindUrl");
 const CACHE_KEY = Symbol("socialRewindCache");
+const RAW_KEY = Symbol("socialRewindRaw");
 
 interface TaggedXhr {
   [URL_KEY]?: string;
   [CACHE_KEY]?: { raw: unknown; out: unknown };
+  /** Set once the page read the body before DONE (streaming). That request stays unfiltered. */
+  [RAW_KEY]?: boolean;
 }
 
 /**
@@ -74,12 +77,19 @@ export function installNetwork(getRules: () => ActiveRules, win: typeof globalTh
     proto.open = function (this: XMLHttpRequest & TaggedXhr, method: string, url: string | URL, ...rest: unknown[]) {
       this[URL_KEY] = absolute(url);
       delete this[CACHE_KEY];
+      delete this[RAW_KEY];
       return (origOpen as (...a: unknown[]) => void).call(this, method, url, ...rest);
     } as typeof proto.open;
 
     const filtered = (xhr: XMLHttpRequest & TaggedXhr, raw: unknown, kind: "text" | "json"): unknown => {
       try {
-        if (xhr.readyState !== 4 || !xhr[URL_KEY]) return raw;
+        if (!xhr[URL_KEY] || xhr[RAW_KEY]) return raw;
+        if (xhr.readyState !== 4) {
+          // Streaming readers track offsets into responseText. If the page saw the raw
+          // partial body, returning a filtered (shorter) body at DONE would break them.
+          if (xhr.readyState === 3) xhr[RAW_KEY] = true;
+          return raw;
+        }
         const cached = xhr[CACHE_KEY];
         if (cached && cached.raw === raw) return cached.out;
         const preds = predicatesFor(xhr[URL_KEY], getRules());

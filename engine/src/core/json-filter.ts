@@ -50,6 +50,47 @@ export function filterJson(root: unknown, predicates: Predicate[]): number {
 
 const XSSI_PREFIXES = ["for (;;);", ")]}'\n", ")]}'"];
 
+// Integers above 2^53 (Instagram media/user pks) lose precision through
+// JSON.parse/stringify. Before parsing, wrap long integer literals (outside
+// strings) in a marker string; after stringifying, unwrap them byte-for-byte.
+const BIG_MARK = "\\u0000SRBIG:";
+const BIG_RESTORE = /"\\u0000SRBIG:(-?\d+)"/g;
+
+export function protectBigInts(text: string): string {
+  let out = "";
+  let last = 0;
+  let inString = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text.charCodeAt(i);
+    if (inString) {
+      if (c === 92 /* \ */) i++;
+      else if (c === 34 /* " */) inString = false;
+      continue;
+    }
+    if (c === 34) {
+      inString = true;
+      continue;
+    }
+    const isStart = c === 45 /* - */ || (c >= 48 && c <= 57);
+    if (!isStart) continue;
+    let j = i + 1;
+    while (j < text.length && text.charCodeAt(j) >= 48 && text.charCodeAt(j) <= 57) j++;
+    const next = text[j];
+    const token = text.slice(i, j);
+    const digits = token.startsWith("-") ? token.length - 1 : token.length;
+    if (digits >= 16 && next !== "." && next !== "e" && next !== "E") {
+      out += text.slice(last, i) + `"${BIG_MARK}${token}"`;
+      last = j;
+    }
+    i = j - 1;
+  }
+  return last === 0 ? text : out + text.slice(last);
+}
+
+export function restoreBigInts(text: string): string {
+  return text.replace(BIG_RESTORE, "$1");
+}
+
 /**
  * Filter a response body. Handles XSSI prefixes and newline-delimited JSON
  * (streamed/deferred GraphQL). Returns null if nothing changed or the body
@@ -67,15 +108,18 @@ export function filterBody(text: string, predicates: Predicate[]): { text: strin
     }
   }
 
+  // Our marker could collide with a payload that already contains it; don't risk it.
+  if (body.includes("\\u0000SRBIG:")) return null;
+
   const tryOne = (chunk: string): { out: string; removed: number } | null => {
     let parsed: Json;
     try {
-      parsed = JSON.parse(chunk) as Json;
+      parsed = JSON.parse(protectBigInts(chunk)) as Json;
     } catch {
       return null;
     }
     const removed = filterJson(parsed, predicates);
-    return { out: removed ? JSON.stringify(parsed) : chunk, removed };
+    return { out: removed ? restoreBigInts(JSON.stringify(parsed)) : chunk, removed };
   };
 
   const whole = tryOne(body);

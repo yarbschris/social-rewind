@@ -22,7 +22,7 @@ cd engine
 pnpm install
 pnpm test        # unit tests (vitest + happy-dom)
 pnpm typecheck
-pnpm build       # → engine/dist/social-rewind-engine.js
+pnpm build       # → engine/dist/social-rewind-{page,isolated}.js
 ```
 
 ### iOS

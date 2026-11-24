@@ -1,4 +1,4 @@
-import { filterBody, filterJson, matches } from "../src/core/json-filter";
+import { filterBody, filterJson, matches, protectBigInts } from "../src/core/json-filter";
 import type { Predicate } from "../src/core/types";
 
 const isAd: Predicate = { anyOf: [{ path: "ad_id", exists: true }, { path: "node.injected", exists: true }] };
@@ -58,5 +58,23 @@ describe("filterBody", () => {
     expect(out?.removed).toBe(1);
     expect(out?.text.split("\n")[0]).toBe(JSON.stringify({ items: [{ id: 2 }] }));
     expect(out?.text.split("\n")[2]).toBe(JSON.stringify({ label: "x" }));
+  });
+});
+
+describe("big integers", () => {
+  it("survive filtering byte-for-byte", () => {
+    const body = '{"items":[{"pk":9007199254740993,"id":"1"},{"ad_id":1},{"pk":-12345678901234567}],"f":1.25,"s":"9007199254740993"}';
+    const out = filterBody(body, [isAd]);
+    expect(out?.text).toBe('{"items":[{"pk":9007199254740993,"id":"1"},{"pk":-12345678901234567}],"f":1.25,"s":"9007199254740993"}');
+  });
+
+  it("leaves digits inside strings (including escaped quotes) alone", () => {
+    expect(protectBigInts('{"a":"x\\"12345678901234567","b":12345678901234567}')).toBe(
+      '{"a":"x\\"12345678901234567","b":"\\u0000SRBIG:12345678901234567"}',
+    );
+  });
+
+  it("refuses to filter bodies that already contain the marker", () => {
+    expect(filterBody('{"items":[{"ad_id":1,"x":"\\u0000SRBIG:1"}]}', [isAd])).toBeNull();
   });
 });

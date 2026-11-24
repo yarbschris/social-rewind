@@ -1,5 +1,5 @@
 import type { ActiveRules } from "./compile";
-import type { DomRule } from "./types";
+import type { HideClosestRule, HideIfTextRule } from "./types";
 import { send } from "./bridge";
 
 export const HIDDEN_ATTR = "data-sr-hidden";
@@ -44,16 +44,39 @@ export function buildCss(rules: ActiveRules, opts: DomOptions, onError: (m: stri
   return lines.join("\n");
 }
 
-function textMatches(container: Element, texts: string[], mode: "exact" | "prefix"): boolean {
-  const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
-  for (let n = walker.nextNode(); n; n = walker.nextNode()) {
-    const t = n.nodeValue?.trim();
-    if (!t) continue;
-    for (const want of texts) {
-      if (mode === "exact" ? t === want : t.startsWith(want)) return true;
+type TextRule = { id: string; rule: HideIfTextRule };
+
+function textNodeMatches(t: string, rule: HideIfTextRule): boolean {
+  const mode = rule.match ?? "exact";
+  return rule.text.some((want) => (mode === "exact" ? t === want : t.startsWith(want)));
+}
+
+/** One text walk per scope; returns the id of the first rule that matches. */
+function matchText(container: Element, group: TextRule[]): string | null {
+  const scopes = new Map<string, TextRule[]>(); // "" = whole container
+  for (const r of group) {
+    const key = r.rule.within ?? "";
+    scopes.set(key, [...(scopes.get(key) ?? []), r]);
+  }
+  for (const [scope, rules] of scopes) {
+    let roots: Element[] = [container];
+    if (scope) {
+      try {
+        roots = [...container.querySelectorAll(scope)];
+      } catch {
+        continue;
+      }
+    }
+    for (const root of roots) {
+      const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+      for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+        const t = n.nodeValue?.trim();
+        if (!t) continue;
+        for (const r of rules) if (textNodeMatches(t, r.rule)) return r.id;
+      }
     }
   }
-  return false;
+  return null;
 }
 
 function within(root: ParentNode, selector: string): Element[] {
@@ -82,30 +105,39 @@ export function installDom(getRules: () => ActiveRules, initial: DomOptions, onE
     if (opts.debug) send({ type: "ruleHit", ruleId: id });
   };
 
-  const applyRule = (root: ParentNode, id: string, rule: DomRule) => {
-    if (rule.type === "hideClosest") {
-      for (const m of within(root, rule.match)) {
-        const target = m.closest(rule.closest);
-        if (target) hide(target, id);
-      }
-    } else {
-      const containers = new Set<Element>(within(root, rule.container));
-      if (root instanceof Element) {
-        try {
-          const up = root.closest(rule.container);
-          if (up) containers.add(up);
-        } catch {
-          /* invalid selector */
-        }
-      }
-      for (const c of containers) {
-        if (!c.hasAttribute(HIDDEN_ATTR) && textMatches(c, rule.text, rule.match ?? "exact")) hide(c, id);
-      }
+  const applyClosest = (root: ParentNode, id: string, rule: HideClosestRule) => {
+    for (const m of within(root, rule.match)) {
+      const target = m.closest(rule.closest);
+      if (target) hide(target, id);
     }
   };
 
+  const containersFor = (root: ParentNode, selector: string): Set<Element> => {
+    const set = new Set<Element>(within(root, selector));
+    if (root instanceof Element) {
+      try {
+        const up = root.closest(selector);
+        if (up) set.add(up);
+      } catch {
+        /* invalid selector */
+      }
+    }
+    return set;
+  };
+
   const apply = (root: ParentNode) => {
-    for (const { id, rule } of getRules().dom) applyRule(root, id, rule);
+    const groups = new Map<string, TextRule[]>();
+    for (const { id, rule } of getRules().dom) {
+      if (rule.type === "hideClosest") applyClosest(root, id, rule);
+      else groups.set(rule.container, [...(groups.get(rule.container) ?? []), { id, rule }]);
+    }
+    for (const [selector, group] of groups) {
+      for (const c of containersFor(root, selector)) {
+        if (c.hasAttribute(HIDDEN_ATTR)) continue;
+        const hit = matchText(c, group);
+        if (hit) hide(c, hit);
+      }
+    }
   };
 
   const observer = new MutationObserver((records) => {

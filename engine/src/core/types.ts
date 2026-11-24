@@ -91,6 +91,8 @@ export interface HideIfTextRule {
   text: string[];
   /** "exact" (default): whole text node equals. "prefix": text node starts with. */
   match?: "exact" | "prefix";
+  /** Only consider text inside descendants of the container matching this selector (e.g. "header"). */
+  within?: string;
 }
 
 export interface RouteRule {
@@ -152,7 +154,8 @@ export interface IdentityDef {
 }
 
 // ---------------------------------------------------------------------------
-// Events to native (webkit.messageHandlers.socialRewind / SocialRewindAndroid)
+// Events to native (webkit.messageHandlers.socialRewind in the isolated world / SocialRewindAndroid).
+// Native must treat these as untrusted input.
 // ---------------------------------------------------------------------------
 
 export type BridgeEvent =

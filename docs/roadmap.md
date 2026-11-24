@@ -12,7 +12,9 @@ Legend: ✅ done · 🚧 in progress · ⬜ not started · ❓ needs a decision 
 
 ## Phase 1: Instagram MVP
 - ✅ Repository, license, docs
-- 🚧 Filter engine core: router guard, DOM filter, network filter, counter, bridge
+- ✅ Filter engine core: router guard, DOM filter, network filter, counter, bridge (85 unit tests)
+- ✅ Two-world split (page / isolated), config by closure, untrusted bridge (ADR 0004)
+- 🚧 Native URL-observer route backstop, with loop breaker
 - 🚧 Instagram rule pack v0 (selectors **unverified** until spikes 0.2/0.3)
 - 🚧 RewindCore Swift package: settings, rule packs, allowlist, config builder
 - 🚧 iOS app shell: onboarding, settings, browser, grayscale, counter UI, scroll reminders
@@ -22,9 +24,12 @@ Legend: ✅ done · 🚧 in progress · ⬜ not started · ❓ needs a decision 
 ## Phase 2: Robustness
 - ⬜ Filter debug overlay (outline hidden elements and show which rule matched)
 - ⬜ Scrubbed fixture capture tool, plus Playwright WebKit tests against fixtures
-- ⬜ Optional rule refresh (fetch, validate, version-gate, fall back), plus ed25519 signing
+- 🚧 Optional rule refresh (fetch, validate, version-gate, fall back). Native validation, including same-origin targets and size caps, is in progress.
+- ⬜ **ed25519-signed rule packs. Required before rule refresh ships in a release.**
 - ⬜ Hard features: story ads, reposts, AI-labeled posts
-- ⬜ Localized text matches (non-English UI)
+- ⬜ Localized text matches (non-English UI), and locale-independent identity detection
+- ⬜ Network rules scoped per GraphQL query (`x-fb-friendly-name` / `fb_api_req_friendly_name`), so non-feed calls are never buffered
+- ⬜ Android: equivalent of content-world isolation
 
 ## Phase 3: More platforms (rough order of feasibility)
 Reddit → X → LinkedIn → Facebook → Snapchat (web is chat-only; may not work in a mobile web view) → YouTube (Google blocks sign-in inside embedded web views) → TikTok (the web app is mostly the feed we'd be removing)

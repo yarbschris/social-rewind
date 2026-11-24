@@ -2,17 +2,19 @@
   "$schema": "./schema/rule-pack.schema.json",
   "schemaVersion": 1,
   "platform": "instagram",
-  "revision": 1,
+  "revision": 2,
   "minEngineVersion": 1,
   "startPath": "/",
   "alwaysAllowRoutes": [
     "^/accounts/",
     "^/challenge/",
-    "^/two_factor",
+    "^/two_factor(?:/|$)",
     "^/auth_platform/",
     "^/oauth/",
     "^/legal/",
-    "^/privacy/"
+    "^/privacy/",
+    "^/consent/",
+    "^/terms/"
   ],
   "features": {
     "blockReels": {
@@ -26,20 +28,40 @@
           "a[href^=\"/reels/\"]"
         ],
         "dom": [
-          { "type": "hideClosest", "match": "article a[href^=\"/reel/\"]", "closest": "article" }
+          {
+            "type": "hideClosest",
+            "match": "article a[href*=\"/reel/\"]",
+            "closest": "article"
+          }
         ],
         "routes": [
-          { "pattern": "^/reels/?", "action": "redirect", "to": "/" },
-          { "pattern": "^/(?:[^/]+/)?reel/", "action": "block" }
+          {
+            "pattern": "^/reels(?:/|$)",
+            "action": "redirect",
+            "to": "/"
+          },
+          {
+            "pattern": "^/(?:[^/]+/)?reel/[^/]+",
+            "action": "block"
+          }
         ],
         "network": [
           {
             "url": "^https://www\\.instagram\\.com/(?:graphql/query|api/graphql|api/v1/feed/)",
             "removeWhere": {
               "anyOf": [
-                { "path": "product_type", "equals": "clips" },
-                { "path": "media.product_type", "equals": "clips" },
-                { "path": "node.media.product_type", "equals": "clips" }
+                {
+                  "path": "product_type",
+                  "equals": "clips"
+                },
+                {
+                  "path": "media.product_type",
+                  "equals": "clips"
+                },
+                {
+                  "path": "node.media.product_type",
+                  "equals": "clips"
+                }
               ]
             },
             "verified": false
@@ -54,11 +76,15 @@
       "default": true,
       "rules": {
         "css": [
-          "html[data-sr-path^=\"/explore/search\"] a[href^=\"/p/\"]",
-          "html[data-sr-path^=\"/explore/search\"] a[href^=\"/reel/\"]"
+          "html[data-sr-path^=\"/explore/search\"] a[href*=\"/p/\"]",
+          "html[data-sr-path^=\"/explore/search\"] a[href*=\"/reel/\"]"
         ],
         "routes": [
-          { "pattern": "^/explore(?:/(?!search/)|/?$)", "action": "redirect", "to": "/explore/search/" }
+          {
+            "pattern": "^/explore(?:/(?!search/)|/?$)",
+            "action": "redirect",
+            "to": "/explore/search/"
+          }
         ]
       }
     },
@@ -74,7 +100,11 @@
           "[role=\"button\"]:has(> svg[aria-label=\"Comment\"])"
         ],
         "routes": [
-          { "pattern": "^/p/([^/]+)/comments/?", "action": "redirect", "to": "/p/$1/" }
+          {
+            "pattern": "^/(?:[^/]+/)?p/([^/]+)/comments(?:/|$)",
+            "action": "redirect",
+            "to": "/p/$1/"
+          }
         ]
       }
     },
@@ -88,7 +118,11 @@
           "a[href^=\"/stories/\"]"
         ],
         "routes": [
-          { "pattern": "^/stories/", "action": "redirect", "to": "/" }
+          {
+            "pattern": "^/stories(?:/|$)",
+            "action": "redirect",
+            "to": "/"
+          }
         ]
       }
     },
@@ -109,18 +143,40 @@
       "default": true,
       "rules": {
         "dom": [
-          { "type": "hideIfText", "container": "article", "text": ["Sponsored", "Ad"] }
+          {
+            "type": "hideIfText",
+            "container": "article",
+            "text": [
+              "Sponsored",
+              "Ad"
+            ]
+          }
         ],
         "network": [
           {
             "url": "^https://www\\.instagram\\.com/(?:graphql/query|api/graphql|api/v1/feed/)",
             "removeWhere": {
               "anyOf": [
-                { "path": "ad_id", "exists": true },
-                { "path": "injected", "exists": true },
-                { "path": "node.ad_id", "exists": true },
-                { "path": "node.injected", "exists": true },
-                { "path": "media.ad_id", "exists": true }
+                {
+                  "path": "ad_id",
+                  "exists": true
+                },
+                {
+                  "path": "injected",
+                  "exists": true
+                },
+                {
+                  "path": "node.ad_id",
+                  "exists": true
+                },
+                {
+                  "path": "node.injected",
+                  "exists": true
+                },
+                {
+                  "path": "media.ad_id",
+                  "exists": true
+                }
               ]
             },
             "verified": false
@@ -135,16 +191,35 @@
       "default": true,
       "rules": {
         "dom": [
-          { "type": "hideIfText", "container": "article", "text": ["Suggested for you", "Suggested posts"] },
-          { "type": "hideIfText", "container": "main div:has(> div > a[href^=\"/explore/people/\"])", "text": ["Suggested for you"] }
+          {
+            "type": "hideIfText",
+            "container": "article",
+            "text": [
+              "Suggested for you",
+              "Suggested posts"
+            ]
+          },
+          {
+            "type": "hideIfText",
+            "container": "main div:has(> div > a[href^=\"/explore/people/\"])",
+            "text": [
+              "Suggested for you"
+            ]
+          }
         ],
         "network": [
           {
             "url": "^https://www\\.instagram\\.com/(?:graphql/query|api/graphql|api/v1/feed/)",
             "removeWhere": {
               "anyOf": [
-                { "path": "suggested_users", "exists": true },
-                { "path": "node.suggested_users", "exists": true }
+                {
+                  "path": "suggested_users",
+                  "exists": true
+                },
+                {
+                  "path": "node.suggested_users",
+                  "exists": true
+                }
               ]
             },
             "verified": false
@@ -158,7 +233,14 @@
       "default": false,
       "rules": {
         "dom": [
-          { "type": "hideIfText", "container": "article", "text": ["reposted", "Reposted"] }
+          {
+            "type": "hideIfText",
+            "container": "article",
+            "text": [
+              "reposted",
+              "Reposted"
+            ]
+          }
         ]
       }
     },
@@ -168,7 +250,14 @@
       "default": false,
       "rules": {
         "dom": [
-          { "type": "hideIfText", "container": "article", "text": ["AI info", "Made with AI"] }
+          {
+            "type": "hideIfText",
+            "container": "article",
+            "text": [
+              "AI info",
+              "Made with AI"
+            ]
+          }
         ]
       }
     },
@@ -186,7 +275,9 @@
       "title": "DMs only",
       "description": "Only your messages. Everything else is blocked.",
       "home": "/direct/inbox/",
-      "allowRoutes": ["^/direct/"],
+      "allowRoutes": [
+        "^/direct/"
+      ],
       "rules": {
         "css": [
           "a[href=\"/\"]",
@@ -206,7 +297,6 @@
       ],
       "rules": {
         "css": [
-          "html[data-sr-path=\"/\"] main",
           "a[href=\"/explore/\"]",
           "a[href=\"/reels/\"]",
           "a[href=\"/direct/inbox/\"]"

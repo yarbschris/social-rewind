@@ -1,0 +1,60 @@
+import { onSend } from "../src/core/bridge";
+import { compile } from "../src/core/compile";
+import { EVENT_ATTR, resolveIdentity, sanitizePageEvent, startIsolated } from "../src/core/engine";
+import type { BridgeEvent } from "../src/core/types";
+import { config, loadPack, settings } from "./helpers";
+
+const flush = () => new Promise((r) => setTimeout(r, 0));
+
+describe("modes", () => {
+  it("withhold mode CSS until the home path is known", () => {
+    const unresolved = compile(config({ settings: settings({ mode: "savedOnly" }) }));
+    expect(unresolved.css.some((c) => c.id.startsWith("mode:"))).toBe(false);
+    const resolved = compile(config({ settings: settings({ mode: "savedOnly" }), username: "alice" }));
+    expect(resolved.css.some((c) => c.id.startsWith("mode:"))).toBe(true);
+  });
+
+  it("refuse unsafe mode homes", () => {
+    const pack = loadPack("instagram");
+    pack.modes!.dmsOnly!.home = "//evil.example/";
+    const errors: string[] = [];
+    const r = compile(config({ settings: settings({ mode: "dmsOnly" }) }, pack), (m) => errors.push(m));
+    expect(r.mode?.home).toBeNull();
+    expect(errors[0]).toMatch(/unsafe mode home/);
+  });
+});
+
+describe("identity", () => {
+  const def = { selector: "nav a", attr: "href", pattern: "^/([^/]+)/$" };
+  it("accepts valid usernames only", () => {
+    document.body.innerHTML = '<nav><a href="/alice.b_1/">me</a></nav>';
+    expect(resolveIdentity(def)).toBe("alice.b_1");
+    document.body.innerHTML = '<nav><a href="/<script>/">me</a></nav>';
+    expect(resolveIdentity(def)).toBeNull();
+  });
+});
+
+describe("page → isolated events", () => {
+  it("forwards only well-formed routeBlocked/error events", () => {
+    expect(sanitizePageEvent('{"type":"routeBlocked","path":"/reels/","reason":"blockReels.route0"}')).toEqual({
+      type: "routeBlocked",
+      path: "/reels/",
+      reason: "blockReels.route0",
+    });
+    expect(sanitizePageEvent('{"type":"identity","username":"mallory"}')).toBeNull();
+    expect(sanitizePageEvent('{"type":"postViewed","key":"x","sessionCount":999}')).toBeNull();
+    expect(sanitizePageEvent("not json")).toBeNull();
+    expect(sanitizePageEvent("x".repeat(5000))).toBeNull();
+  });
+
+  it("isolated world relays page events to native", async () => {
+    const events: BridgeEvent[] = [];
+    const off = onSend((e) => events.push(e));
+    const api = startIsolated(config());
+    document.documentElement.setAttribute(EVENT_ATTR, '{"type":"routeBlocked","path":"/reels/","reason":"r"}');
+    await flush();
+    expect(events.map((e) => e.type)).toEqual(expect.arrayContaining(["ready", "routeBlocked"]));
+    api?.stop();
+    off();
+  });
+});

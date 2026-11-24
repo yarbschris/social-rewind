@@ -7,6 +7,7 @@ import type {
   RulePack,
   RuleSet,
 } from "./types";
+import { isSafePath } from "./router";
 
 export interface Tagged<T> {
   id: string;
@@ -99,10 +100,17 @@ export function compile(config: EngineConfig, onError: (msg: string) => void = (
 
   const modeDef = settings.mode !== "normal" ? pack.modes?.[settings.mode] : undefined;
   if (modeDef) {
-    addSet(`mode:${settings.mode}`, modeDef.rules);
+    let home = resolveHome(modeDef.home, config.username);
+    if (home !== null && !isSafePath(home)) {
+      onError(`unsafe mode home: ${home}`);
+      home = null;
+    }
+    // Mode CSS waits until home is known, so it can't hide the page we're stuck on
+    // (e.g. the login form) while the username is unresolved.
+    if (home !== null) addSet(`mode:${settings.mode}`, modeDef.rules);
     out.mode = {
       id: `mode:${settings.mode}`,
-      home: resolveHome(modeDef.home, config.username),
+      home,
       allow: modeDef.allowRoutes.map((p) => re(p, onError)).filter((r): r is RegExp => r !== null),
     };
   }

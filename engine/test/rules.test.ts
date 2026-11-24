@@ -31,3 +31,17 @@ describe.each(packs)("rule pack %s", (_file, pack) => {
     expect(JSON.stringify(pack)).not.toMatch(/"(allowedHosts|hosts|scripts?)"\s*:/);
   });
 });
+
+describe("schema rejects off-origin paths", () => {
+  const base = packs[0]![1];
+  it.each(["//evil.example/", "/\\evil.example", "https://evil.example/"])("mode home %j", (home) => {
+    const pack = structuredClone(base);
+    pack.modes!.dmsOnly!.home = home;
+    expect(validate(pack)).toBe(false);
+  });
+  it("route redirect target", () => {
+    const pack = structuredClone(base);
+    pack.features.blockReels!.rules.routes![0]!.to = "//evil.example/";
+    expect(validate(pack)).toBe(false);
+  });
+});

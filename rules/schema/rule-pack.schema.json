@@ -69,7 +69,7 @@
   "$defs": {
     "path": {
       "type": "string",
-      "pattern": "^/"
+      "pattern": "^/(?![/\\\\])(?!.*\\\\)(?!.*://)"
     },
     "regex": {
       "type": "string",
@@ -129,7 +129,7 @@
         },
         "home": {
           "type": "string",
-          "pattern": "^/"
+          "pattern": "^/(?![/\\\\])(?!.*\\\\)(?!.*://)"
         },
         "allowRoutes": {
           "type": "array",
@@ -223,6 +223,9 @@
                 "exact",
                 "prefix"
               ]
+            },
+            "within": {
+              "$ref": "#/$defs/selector"
             }
           }
         }
@@ -247,7 +250,7 @@
         },
         "to": {
           "type": "string",
-          "pattern": "^/"
+          "pattern": "^/(?![/\\\\])(?!.*\\\\)(?!.*://)"
         }
       },
       "if": {

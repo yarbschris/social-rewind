@@ -8,8 +8,11 @@
 │  ├─ WKWebsiteDataStore(forIdentifier:)   isolated cookies    │
 │  ├─ WKContentRuleList                    native blocking     │
 │  ├─ NavigationPolicy                     host allowlist      │
-│  ├─ WKUserScript @ documentStart         filter engine       │
-│  │     config: settings + rule pack (JSON)                   │
+│  ├─ WKUserScript @ documentStart, page world: router+network │
+│  ├─ WKUserScript @ documentStart, "SocialRewind" world:      │
+│  │     CSS/DOM filter, counter, identity, bridge             │
+│  │     (config passed to both by closure)                    │
+│  ├─ URL observer (KVO)                   route backstop      │
 │  └─ Native chrome: post counter, scroll reminders, grayscale │
 │                                                              │
 │ App Group storage: settings, app tokens, local stats         │
@@ -28,23 +31,39 @@
 
 ## Filter engine (`engine/`)
 
-One JS bundle, injected at document start into the page content world, because it has to wrap `fetch` and `history` before the site's own code runs. Native passes it `window.__SOCIAL_REWIND_CONFIG__ = { settings, rules, platform, debug }` in a preceding user script.
+Two bundles, both injected at document start (see [ADR 0004](decisions/0004-two-content-worlds.md)):
 
-| Layer | Module | Purpose |
-|---|---|---|
-| Router guard | `core/router.ts` | Wraps `pushState`/`replaceState` and listens for `popstate`/`click`, enforcing route rules (block/redirect) and mode allowlists. |
-| Network filter | `core/network.ts` | Wraps `fetch`/`XMLHttpRequest`. For URLs that match, it parses the JSON and drops array items matching declarative predicates (ads, suggested, reels) before the app renders them. |
-| DOM filter | `core/dom.ts` | Injected CSS for static selectors, plus a `MutationObserver` for rules that need logic: `hideClosest`, `hideIfText`. |
-| Counter | `core/counter.ts` | `IntersectionObserver` that counts each unique post once it has been ≥50% visible for 1s. |
-| Bridge | `core/bridge.ts` | Sends `postsViewed`, `routeBlocked`, `ruleHit` (debug) and `ready` events to native through `webkit.messageHandlers.socialRewind` (Android: `SocialRewindAndroid`). |
+- **Page world** (`social-rewind-page.js`): has to share the site's JS globals in order to wrap `history`, `fetch` and `XMLHttpRequest` before the site's code runs. It contains no bridge and defines no globals. Instagram's scripts can tamper with it, but only to weaken their own filtering.
+- **Isolated world** (`social-rewind-isolated.js`, `WKContentWorld` "SocialRewind"): CSS/DOM filtering, the counter, identity and the bridge. Page scripts can't see it, and the message handler is registered only in this world.
 
-The engine applies only the rules whose `features` are turned on in settings, or rules belonging to the active `mode`.
+The two worlds share only the DOM. The page bundle writes `html[data-sr-path]` (for route-scoped CSS) and `html[data-sr-event]` (route-blocked and error events, which the isolated bundle sanitizes and forwards).
+
+Native wraps each bundle as `(function(){ const __SR_CONFIG__ = {...}; <bundle> })()`, so the config (settings, rule pack, username) is never a global the page can read.
+
+| Layer | Module | World | Purpose |
+|---|---|---|---|
+| Router guard | `core/router.ts` | page | Wraps `pushState`/`replaceState`, listens for `popstate`/clicks, and enforces route rules and mode allowlists. Redirect targets must be same-origin. A sessionStorage loop breaker stops enforcing after 3 forced navigations in 10s. |
+| Network filter | `core/network.ts` | page | Wraps `fetch`/XHR and drops JSON array items matching predicates. Large integers are preserved exactly. A streamed XHR read mid-flight is never filtered. Unverified rules only run with `experimental`. |
+| DOM filter | `core/dom.ts` | isolated | Injected CSS (one rule per selector), plus a `MutationObserver` for `hideClosest` and `hideIfText` (one text walk per container). |
+| Counter | `core/counter.ts` | isolated | Counts each unique post once it has been ≥50% visible for 1s. Always runs; `postCounter` only controls whether native shows it. |
+| Bridge | `core/bridge.ts` | isolated | Sends `ready`, `postViewed`, `routeBlocked`, `ruleHit` (debug), `identity` and `error` to native. **Native treats all of these as untrusted.** |
+
+**Route enforcement in JS is best-effort.** Native observes `webView.url`, which updates on `pushState`, and is the authoritative backstop, with its own loop breaker. Settings changes that affect routes or network filtering reload the web view. CSS/DOM-only changes are pushed live into the isolated world.
 
 ## Rule packs (`rules/`)
 
 Rule packs are declarative JSON, validated by `rules/schema/rule-pack.schema.json`. Each pack has a `version` and a `minEngineVersion`. A refreshed pack is used only if it parses, passes validation, has a compatible `minEngineVersion` and a newer `version` than the bundled one. Otherwise the app keeps using the bundled pack.
 
-Packs **can't** add hosts, run script or change native behavior. That keeps rule refresh App Store-safe and limits the damage if the repository is ever compromised. (Planned hardening: ed25519-signed packs; see roadmap.)
+What a pack **can't** do, and where that is enforced:
+
+| Guarantee | Schema (CI) | Engine | Native |
+|---|---|---|---|
+| No scripts and no host fields | ✅ (`additionalProperties: false`) | n/a: only known fields are read | ✅ Codable decode ignores unknown fields; the host allowlist is hardcoded |
+| Redirect targets and mode homes are same-origin paths | ✅ pattern | ✅ `isSafePath` + URL origin check, `$n` percent-encoded | 🚧 `RulePackSelector` (in progress) |
+| Invalid regexes or selectors can't break the engine | n/a | ✅ dropped and reported | n/a |
+| Size caps (pack size, selector count, regex length) | n/a | n/a | 🚧 `RulePackSelector` (in progress) |
+
+What a pack **can** still do: hide any element or drop any post that matches its selectors or predicates. A compromised repository could therefore censor content inside a platform, but it couldn't exfiltrate data or load other sites. **Refreshed packs must be ed25519-signed before rule refresh ships in a release** (see roadmap).
 
 ## Swift layout
 

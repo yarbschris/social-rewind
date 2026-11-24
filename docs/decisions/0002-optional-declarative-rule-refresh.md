@@ -7,9 +7,9 @@ Platforms change their markup often. If fixes could only ship with app updates, 
 
 ## Decision
 - Rule packs are bundled with the app and always work offline.
-- Users can turn on **"Update filter rules automatically"** (off by default). The app then fetches `https://raw.githubusercontent.com/<org>/social-rewind/main/rules/<platform>.json` and sends nothing beyond a plain GET.
+- Users can turn on **"Update filter rules automatically"** (off by default). The app then fetches `https://raw.githubusercontent.com/yarbschris/social-rewind/main/rules/<platform>.json` and sends nothing beyond a plain GET.
 - A pack is data only: selectors, text matches, JSON predicates and route patterns. It can't run code, add hosts or change native behavior. This keeps rule refresh within App Store Guideline 2.5.2.
-- A fetched pack is adopted only if it validates, `minEngineVersion <= engineVersion`, and its `version` is newer than the one currently in use.
+- A fetched pack is adopted only if it validates, `minEngineVersion <= engineVersion`, and its `revision` is higher than the one currently in use.
 
 ## Consequences
 - GitHub sees the user's IP address when refresh is on. This is disclosed in `docs/privacy.md`.

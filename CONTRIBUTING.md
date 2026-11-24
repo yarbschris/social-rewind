@@ -44,7 +44,7 @@ Most breakages come from a platform renaming its markup. Usually the fix is:
 1. Reproduce it in the app with **Settings → Developer → Show filter debug overlay** turned on.
 2. Update the selector, text match or JSON predicate in `rules/<platform>.json`.
 3. Add or update a scrubbed fixture in `engine/test/fixtures/<platform>/` and a test that covers it.
-4. Bump the rule pack's `version`.
+4. Bump the rule pack's `revision`.
 
 Prefer stable hooks, in this order: URL/`href` patterns → ARIA roles and labels → visible text → structure. Never use generated class names.
 

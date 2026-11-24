@@ -1,0 +1,33 @@
+name: engine
+
+on:
+  push:
+    branches: [main]
+    paths: ["engine/**", "rules/**", ".github/workflows/engine.yml"]
+  pull_request:
+    paths: ["engine/**", "rules/**", ".github/workflows/engine.yml"]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: engine
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: engine/package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: engine/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm validate-rules
+      - run: pnpm typecheck
+      - run: pnpm test
+      - run: pnpm build

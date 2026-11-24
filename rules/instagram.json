@@ -1,0 +1,232 @@
+{
+  "$schema": "./schema/rule-pack.schema.json",
+  "schemaVersion": 1,
+  "platform": "instagram",
+  "revision": 1,
+  "minEngineVersion": 1,
+  "startPath": "/",
+  "alwaysAllowRoutes": [
+    "^/accounts/",
+    "^/challenge/",
+    "^/two_factor",
+    "^/auth_platform/",
+    "^/oauth/",
+    "^/legal/",
+    "^/privacy/"
+  ],
+  "features": {
+    "blockReels": {
+      "title": "Block Reels",
+      "description": "Removes the Reels tab, Reels in your feed, and the Reels viewer.",
+      "group": "content",
+      "default": true,
+      "rules": {
+        "css": [
+          "a[href=\"/reels/\"]",
+          "a[href^=\"/reels/\"]"
+        ],
+        "dom": [
+          { "type": "hideClosest", "match": "article a[href^=\"/reel/\"]", "closest": "article" }
+        ],
+        "routes": [
+          { "pattern": "^/reels/?", "action": "redirect", "to": "/" },
+          { "pattern": "^/(?:[^/]+/)?reel/", "action": "block" }
+        ],
+        "network": [
+          {
+            "url": "^https://www\\.instagram\\.com/(?:graphql/query|api/graphql|api/v1/feed/)",
+            "removeWhere": {
+              "anyOf": [
+                { "path": "product_type", "equals": "clips" },
+                { "path": "media.product_type", "equals": "clips" },
+                { "path": "node.media.product_type", "equals": "clips" }
+              ]
+            },
+            "verified": false
+          }
+        ]
+      }
+    },
+    "blockExplore": {
+      "title": "Block search posts",
+      "description": "Keeps account search but removes the Explore grid and post results.",
+      "group": "content",
+      "default": true,
+      "rules": {
+        "css": [
+          "html[data-sr-path^=\"/explore/search\"] a[href^=\"/p/\"]",
+          "html[data-sr-path^=\"/explore/search\"] a[href^=\"/reel/\"]"
+        ],
+        "routes": [
+          { "pattern": "^/explore(?:/(?!search/)|/?$)", "action": "redirect", "to": "/explore/search/" }
+        ]
+      }
+    },
+    "hideComments": {
+      "title": "Hide comments",
+      "group": "content",
+      "default": false,
+      "rules": {
+        "css": [
+          "a[href*=\"/comments/\"]",
+          "textarea[aria-label*=\"comment\" i]",
+          "form:has(> textarea[aria-label*=\"comment\" i])",
+          "[role=\"button\"]:has(> svg[aria-label=\"Comment\"])"
+        ],
+        "routes": [
+          { "pattern": "^/p/([^/]+)/comments/?", "action": "redirect", "to": "/p/$1/" }
+        ]
+      }
+    },
+    "hideStories": {
+      "title": "Hide stories",
+      "group": "content",
+      "default": false,
+      "rules": {
+        "css": [
+          "ul:has(> li a[href^=\"/stories/\"])",
+          "a[href^=\"/stories/\"]"
+        ],
+        "routes": [
+          { "pattern": "^/stories/", "action": "redirect", "to": "/" }
+        ]
+      }
+    },
+    "hideFeed": {
+      "title": "Hide feed",
+      "description": "Your home feed shows no posts. DMs, profiles and saved posts still work.",
+      "group": "content",
+      "default": false,
+      "rules": {
+        "css": [
+          "html[data-sr-path=\"/\"] main article"
+        ]
+      }
+    },
+    "blockAds": {
+      "title": "Block ads",
+      "group": "ads",
+      "default": true,
+      "rules": {
+        "dom": [
+          { "type": "hideIfText", "container": "article", "text": ["Sponsored", "Ad"] }
+        ],
+        "network": [
+          {
+            "url": "^https://www\\.instagram\\.com/(?:graphql/query|api/graphql|api/v1/feed/)",
+            "removeWhere": {
+              "anyOf": [
+                { "path": "ad_id", "exists": true },
+                { "path": "injected", "exists": true },
+                { "path": "node.ad_id", "exists": true },
+                { "path": "node.injected", "exists": true },
+                { "path": "media.ad_id", "exists": true }
+              ]
+            },
+            "verified": false
+          }
+        ]
+      }
+    },
+    "hideSuggested": {
+      "title": "Block suggested posts",
+      "description": "Hides posts and accounts from people you don't follow.",
+      "group": "ads",
+      "default": true,
+      "rules": {
+        "dom": [
+          { "type": "hideIfText", "container": "article", "text": ["Suggested for you", "Suggested posts"] },
+          { "type": "hideIfText", "container": "main div:has(> div > a[href^=\"/explore/people/\"])", "text": ["Suggested for you"] }
+        ],
+        "network": [
+          {
+            "url": "^https://www\\.instagram\\.com/(?:graphql/query|api/graphql|api/v1/feed/)",
+            "removeWhere": {
+              "anyOf": [
+                { "path": "suggested_users", "exists": true },
+                { "path": "node.suggested_users", "exists": true }
+              ]
+            },
+            "verified": false
+          }
+        ]
+      }
+    },
+    "hideReposts": {
+      "title": "Hide reposts",
+      "group": "ads",
+      "default": false,
+      "rules": {
+        "dom": [
+          { "type": "hideIfText", "container": "article", "text": ["reposted", "Reposted"] }
+        ]
+      }
+    },
+    "hideAiLabeled": {
+      "title": "Hide AI-labeled posts",
+      "group": "ads",
+      "default": false,
+      "rules": {
+        "dom": [
+          { "type": "hideIfText", "container": "article", "text": ["AI info", "Made with AI"] }
+        ]
+      }
+    },
+    "hideStoryAds": {
+      "title": "Hide story ads",
+      "description": "Coming soon: automatically skips sponsored stories.",
+      "group": "ads",
+      "default": false,
+      "available": false,
+      "rules": {}
+    }
+  },
+  "modes": {
+    "dmsOnly": {
+      "title": "DMs only",
+      "description": "Only your messages. Everything else is blocked.",
+      "home": "/direct/inbox/",
+      "allowRoutes": ["^/direct/"],
+      "rules": {
+        "css": [
+          "a[href=\"/\"]",
+          "a[href=\"/explore/\"]",
+          "a[href=\"/reels/\"]",
+          "a[href=\"/create/select/\"]"
+        ]
+      }
+    },
+    "savedOnly": {
+      "title": "Saved posts only",
+      "description": "Only posts you've saved. Everything else is blocked.",
+      "home": "/{username}/saved/",
+      "allowRoutes": [
+        "^/[^/]+/saved(?:/.*)?$",
+        "^/(?:[^/]+/)?p/[^/]+/?$"
+      ],
+      "rules": {
+        "css": [
+          "html[data-sr-path=\"/\"] main",
+          "a[href=\"/explore/\"]",
+          "a[href=\"/reels/\"]",
+          "a[href=\"/direct/inbox/\"]"
+        ]
+      }
+    }
+  },
+  "counter": {
+    "item": "article",
+    "key": {
+      "selector": "a[href*=\"/p/\"], a[href*=\"/reel/\"]",
+      "attr": "href",
+      "pattern": "/(?:p|reel)/([^/?#]+)"
+    },
+    "minVisibleRatio": 0.5,
+    "minVisibleMs": 1000
+  },
+  "identity": {
+    "selector": "[role=\"navigation\"] a[href^=\"/\"]:has(img[alt$=\"profile picture\"])",
+    "attr": "href",
+    "pattern": "^/([A-Za-z0-9._]+)/$"
+  }
+}

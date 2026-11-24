@@ -35,15 +35,22 @@ describe("evaluateRoute (instagram)", () => {
     expect(evaluateRoute("/someone/reel/XYZ/", normal)).toMatchObject({ action: "block" });
   });
 
-  it("sends Explore to account search", () => {
-    expect(evaluateRoute("/explore/", normal)).toMatchObject({ action: "redirect", to: "/explore/search/" });
-    expect(evaluateRoute("/explore", normal)).toMatchObject({ action: "redirect", to: "/explore/search/" });
-    expect(evaluateRoute("/explore/tags/cats/", normal)).toMatchObject({ action: "redirect" });
+  it("keeps Explore reachable (for account search) but blocks tag and location grids", () => {
+    expect(evaluateRoute("/explore/", normal).action).toBe("allow");
+    expect(evaluateRoute("/explore/search/", normal).action).toBe("allow");
+    expect(evaluateRoute("/explore/tags/cats/", normal)).toMatchObject({ action: "block" });
   });
 
   it("uses capture groups in redirects", () => {
-    expect(evaluateRoute("/p/ABC/comments/", withComments)).toMatchObject({ action: "redirect", to: "/p/ABC/" });
     expect(evaluateRoute("/stories/bob/123/", withComments)).toMatchObject({ action: "redirect", to: "/" });
+    const r = compile(config());
+    r.routes.unshift({ id: "t", pattern: /^\/x\/([^/]+)\//, action: "redirect", to: "/y/$1/" });
+    expect(evaluateRoute("/x/abc/", r)).toMatchObject({ action: "redirect", to: "/y/abc/" });
+  });
+
+  it("blocks the comments page when comments are hidden", () => {
+    expect(evaluateRoute("/p/ABC/comments/", withComments)).toMatchObject({ action: "block" });
+    expect(evaluateRoute("/p/ABC/", withComments).action).toBe("allow");
   });
 
   it("always allows login and account routes, even in modes", () => {
@@ -91,7 +98,9 @@ describe("evaluateRoute: anchoring and safety", () => {
   });
 
   it("percent-encodes capture groups so they can't build a new host", () => {
-    expect(evaluateRoute("/p/a%2F%2Fevil/comments/", withComments)).toMatchObject({ to: "/p/a%252F%252Fevil/" });
+    const r = compile(config());
+    r.routes.unshift({ id: "t", pattern: /^\/x\/([^/]+)\//, action: "redirect", to: "/y/$1/" });
+    expect(evaluateRoute("/x/a%2F%2Fevil/", r)).toMatchObject({ to: "/y/a%252F%252Fevil/" });
   });
 
   it("refuses redirect targets that would leave the origin", () => {
@@ -128,7 +137,7 @@ describe("loop breaker", () => {
 
 describe("installRouter", () => {
   let handle: RouterHandle | null = null;
-  let navs: Array<[string, string]>;
+  let navs: string[];
   let events: BridgeEvent[];
 
   const install = (rules = normal) => {
@@ -137,8 +146,7 @@ describe("installRouter", () => {
     handle = installRouter(() => rules, {
       onPathChange: () => {},
       report: (e) => events.push(e),
-      assign: (h) => navs.push(["assign", h]),
-      replace: (h) => navs.push(["replace", h]),
+      replace: (h) => navs.push(h),
     });
   };
 
@@ -151,11 +159,13 @@ describe("installRouter", () => {
     handle = null;
   });
 
-  it("pushState redirects use assign, so Back returns to where the user was", () => {
-    install();
-    history.pushState(null, "", "/explore/");
-    expect(navs).toEqual([["assign", "https://www.instagram.com/explore/search/"]]);
+  it("in-app navigation to a redirected page is inert (no reload)", () => {
+    install(withComments);
+    history.pushState(null, "", "/explore/tags/cats/");
+    history.pushState(null, "", "/p/ABC/comments/");
+    expect(navs).toEqual([]);
     expect(location.pathname).toBe("/");
+    expect(events.map((e) => e.type)).toEqual(["routeBlocked", "routeBlocked"]);
   });
 
   it("pushState to a blocked route is swallowed and reported", () => {
@@ -172,11 +182,10 @@ describe("installRouter", () => {
     expect(location.pathname).toBe("/direct/inbox/");
   });
 
-  it("mode-blocked link clicks are inert rather than reloading to the mode home", () => {
-    history.replaceState(null, "", "/direct/t/1/");
-    install(dms);
+  it("taps on filtered links are inert", () => {
+    install();
     const a = document.createElement("a");
-    a.href = "/bob/";
+    a.href = "/reels/";
     document.body.appendChild(a);
     const ev = new MouseEvent("click", { bubbles: true, cancelable: true, button: 0 });
     a.dispatchEvent(ev);
@@ -185,9 +194,16 @@ describe("installRouter", () => {
     a.remove();
   });
 
-  it("stops forcing navigation when it detects a loop", () => {
+  it("loading a filtered page directly redirects with replace", () => {
+    history.replaceState(null, "", "/reels/");
     install();
-    for (let i = 0; i < LOOP_LIMIT + 2; i++) history.pushState(null, "", "/reels/");
+    expect(navs).toEqual(["https://www.instagram.com/"]);
+  });
+
+  it("stops forcing navigation when it detects a loop", () => {
+    history.replaceState(null, "", "/reels/");
+    install();
+    for (let i = 0; i < LOOP_LIMIT + 2; i++) handle!.check();
     expect(navs).toHaveLength(LOOP_LIMIT);
     expect(events.some((e) => e.type === "error" && /loop/.test(e.message))).toBe(true);
   });

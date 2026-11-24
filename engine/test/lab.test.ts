@@ -29,3 +29,27 @@ describe("Safari lab snippet", () => {
     table.mockRestore();
   });
 });
+
+describe("Safari lab helpers", () => {
+  it("leaves Hide feed off unless --all", () => {
+    expect(labConfig(loadPack("instagram")).settings.features.hideFeed).toBe(false);
+    expect(labConfig(loadPack("instagram"), { all: true }).settings.features.hideFeed).toBe(true);
+  });
+
+  it("inspect() prints structure without text content or usernames", async () => {
+    document.documentElement.innerHTML =
+      '<head></head><body><main><div role="list"><a href="/alice/" aria-label="alice"><span>Suggested for you</span></a></div></main></body>';
+    (window as unknown as { __socialRewindLab?: boolean }).__socialRewindLab = false;
+    const snippet: string = await makeSnippet(loadPack("instagram"));
+    const lines: string[] = [];
+    const log = vi.spyOn(console, "log").mockImplementation((...a: unknown[]) => void lines.push(a.join(" ")));
+    new Function(snippet)();
+    const lab = (window as unknown as { SocialRewindLab: { inspect(t: string): number } }).SocialRewindLab;
+    expect(lab.inspect("Suggested for you")).toBe(1);
+    const out = lines.join("\n");
+    expect(out).toContain('a[aria-label="alice"][href~"/<user>/"]');
+    expect(out).toContain('div[role="list"]');
+    expect(out).not.toContain("/alice/");
+    log.mockRestore();
+  });
+});

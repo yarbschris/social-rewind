@@ -130,20 +130,23 @@ export interface RouterHandle {
 export interface RouterHooks {
   onPathChange(path: string): void;
   report(event: BridgeEvent): void;
-  /** Navigation primitives (injectable for tests). */
-  assign?(href: string): void;
+  /** Navigation primitive (injectable for tests). */
   replace?(href: string): void;
 }
 
 /**
- * Enforce route decisions for SPA navigations (history API), back/forward,
- * link clicks, and the initial load. This is best-effort: the native shell
- * observes the web view URL as the authoritative backstop.
+ * Enforce route decisions. This is best-effort: the native shell observes the
+ * web view URL as the authoritative backstop.
+ *
+ * - In-app navigation (pushState/replaceState, link taps) to a filtered page is
+ *   **inert**: nothing happens. Redirecting here would force a full page reload,
+ *   since we can't drive the site's router, which loses the user's place.
+ * - Page loads and back/forward (check) redirect to an allowed page, since there
+ *   is no previous page to stay on. These go through the loop breaker.
  */
 export function installRouter(getRules: () => ActiveRules, hooks: RouterHooks): RouterHandle {
   const origPush = history.pushState.bind(history);
   const origReplace = history.replaceState.bind(history);
-  const assign = hooks.assign ?? ((href: string) => location.assign(href));
   const replace = hooks.replace ?? ((href: string) => location.replace(href));
 
   const report = (path: string, d: RouteDecision) => {
@@ -156,7 +159,7 @@ export function installRouter(getRules: () => ActiveRules, hooks: RouterHooks): 
     });
   };
 
-  const navigate = (to: string, how: "assign" | "replace") => {
+  const navigate = (to: string) => {
     const href = sameOriginHref(to);
     if (!href) {
       hooks.report({ type: "error", message: `refused off-origin redirect: ${to}` });
@@ -166,11 +169,11 @@ export function installRouter(getRules: () => ActiveRules, hooks: RouterHooks): 
       hooks.report({ type: "error", message: `redirect loop detected at ${location.pathname}; enforcement paused` });
       return;
     }
-    (how === "assign" ? assign : replace)(href);
+    replace(href);
   };
 
   const wrap =
-    (orig: typeof history.pushState, how: "assign" | "replace") =>
+    (orig: typeof history.pushState) =>
     (data: unknown, unused: string, url?: string | URL | null): void => {
       const path = toPathname(url);
       if (path === null) return orig(data, unused, url);
@@ -179,22 +182,20 @@ export function installRouter(getRules: () => ActiveRules, hooks: RouterHooks): 
       if (d.action === "allow") {
         orig(data, unused, url);
         hooks.onPathChange(path);
-      } else if (d.action === "redirect") {
-        // push → assign keeps the page the user was on in history; replace stays replace.
-        navigate(d.to, how);
       }
-      // block: swallow. Native URL observation is the backstop if the site renders anyway.
+      // block/redirect: swallow (inert). Native URL observation is the backstop
+      // if the site renders the filtered view anyway.
     };
 
-  history.pushState = wrap(origPush, "assign");
-  history.replaceState = wrap(origReplace, "replace");
+  history.pushState = wrap(origPush);
+  history.replaceState = wrap(origReplace);
 
   const check = () => {
     const path = location.pathname;
     const d = evaluateRoute(path, getRules());
     report(path, d);
-    if (d.action === "redirect") navigate(d.to, "replace");
-    else if (d.action === "block") navigate(getRules().mode?.home ?? "/", "replace");
+    if (d.action === "redirect") navigate(d.to);
+    else if (d.action === "block") navigate(getRules().mode?.home ?? "/");
     else hooks.onPathChange(path);
   };
 
@@ -208,14 +209,10 @@ export function installRouter(getRules: () => ActiveRules, hooks: RouterHooks): 
     if (path === null) return;
     const d = evaluateRoute(path, getRules());
     if (d.action === "allow") return;
+    // Inert: stay where the user is.
     e.preventDefault();
     e.stopImmediatePropagation();
     report(path, d);
-    // Mode-blocked links are simply inert: reloading to the mode home would lose
-    // the user's place (e.g. a DM thread and its draft).
-    if (d.action === "redirect" && !d.byMode && normalize(d.to) !== normalize(location.pathname)) {
-      navigate(d.to, "assign");
-    }
   };
 
   addEventListener("popstate", onPop);

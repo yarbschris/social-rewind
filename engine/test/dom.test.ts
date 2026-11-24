@@ -87,3 +87,12 @@ describe("buildCss", () => {
     expect(css).toContain("outline");
   });
 });
+
+describe("debug labels", () => {
+  it("label CSS-matched and JS-hidden elements with their rule id", () => {
+    const css = buildCss(compile(config()), { debug: true, grayscale: false });
+    expect(css).toContain('a[href="/reels/"]::before { content: "SR blockReels.css0"');
+    expect(css).toContain(`[${HIDDEN_ATTR}]::before { content: "SR " attr(${HIDDEN_ATTR})`);
+    expect(buildCss(compile(config()), { debug: false, grayscale: false })).not.toContain("::before");
+  });
+});

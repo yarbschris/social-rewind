@@ -3,7 +3,8 @@
 // bundles in debug mode, so rules outline what they'd hide instead of hiding it,
 // and adds SocialRewindLab.report() to show which rules match the live page.
 //
-//   pnpm lab                      # every available feature on, outlines only
+//   pnpm lab                      # every available feature except "Hide feed", outlines only
+//   pnpm lab -- --all             # include "Hide feed" (outlines every post on Home)
 //   pnpm lab -- --defaults        # the app's default features
 //   pnpm lab -- --mode dmsOnly    # or savedOnly (add --username you)
 //   pnpm lab -- --hide            # actually hide instead of outlining
@@ -28,10 +29,15 @@ async function bundle(entry) {
   return r.outputFiles[0].text;
 }
 
+// Features that would outline everything and drown out the rules being tested.
+const LAB_OFF_BY_DEFAULT = ["hideFeed"];
+
 export function labConfig(pack, opts = {}) {
   const features = {};
   for (const [id, f] of Object.entries(pack.features)) {
-    features[id] = opts.defaults ? f.default : f.available !== false;
+    features[id] = opts.defaults
+      ? f.default
+      : f.available !== false && (opts.all || !LAB_OFF_BY_DEFAULT.includes(id));
   }
   return {
     platform: pack.platform,
@@ -72,8 +78,57 @@ function labRuntime(config) {
     return rows;
   };
 
+  // Structure only: tags, roles, ARIA labels (truncated), href *patterns*. No text content,
+  // so the output is safe to share. Usernames in hrefs are replaced with <user>.
+  const KNOWN = new Set(["p", "reel", "reels", "explore", "stories", "direct", "accounts", "saved", "people", "tags", "create"]);
+  const hrefPattern = (href) => {
+    if (!href) return null;
+    try {
+      const u = new URL(href, location.href);
+      if (u.origin !== location.origin) return `${u.hostname}/…`;
+      return "/" + u.pathname.split("/").filter(Boolean).map((seg, i) => (KNOWN.has(seg) ? seg : i === 0 ? "<user>" : "<id>")).join("/") + "/";
+    } catch {
+      return "?";
+    }
+  };
+  const describe = (el) => {
+    let s = el.tagName.toLowerCase();
+    for (const a of ["role", "aria-label", "aria-hidden", "data-sr-hidden", "tabindex"]) {
+      const v = el.getAttribute(a);
+      if (v !== null) s += `[${a}="${v.length > 32 ? v.slice(0, 32) + "…" : v}"]`;
+    }
+    const href = hrefPattern(el.getAttribute("href"));
+    if (href) s += `[href~"${href}"]`;
+    s += ` (${el.children.length} children)`;
+    return s;
+  };
+
   return {
     config,
+    /** Show the element chain above every text node equal to `text`, e.g. inspect("Suggested for you"). */
+    inspect(text, depth = 14) {
+      const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+      const chains = [];
+      for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+        if (n.nodeValue?.trim() !== text) continue;
+        const chain = [];
+        for (let el = n.parentElement, d = 0; el && el !== document.body && d < depth; el = el.parentElement, d++) {
+          chain.push(describe(el));
+        }
+        chains.push(chain);
+      }
+      if (!chains.length) console.log(`[Social Rewind lab] no text node equal to ${JSON.stringify(text)}`);
+      chains.slice(0, 5).forEach((c, i) =>
+        console.log(`#${i + 1} of ${chains.length}: innermost first\n` + c.map((s, j) => "  ".repeat(j) + s).join("\n")),
+      );
+      return chains.length;
+    },
+    /** Same, starting from an element (e.g. $0, the one selected in the Elements tab). */
+    inspectElement(el, depth = 14) {
+      const chain = [];
+      for (let e = el, d = 0; e && e !== document.body && d < depth; e = e.parentElement, d++) chain.push(describe(e));
+      console.log(chain.map((s, j) => "  ".repeat(j) + s).join("\n"));
+    },
     report() {
       const rows = [];
       for (const [id, f] of Object.entries(pack.features)) {
@@ -131,7 +186,7 @@ export async function makeSnippet(pack, opts = {}) {
 ${wrap(page)}
 ${wrap(isolated)}
 window.SocialRewindLab = (${labRuntime.toString()})(${cfg});
-console.log("[Social Rewind lab] loaded. Scroll around, then run: SocialRewindLab.report()");
+console.log("[Social Rewind lab] loaded. Outlined elements are labeled with the rule that matched. Then run: SocialRewindLab.report()  or  SocialRewindLab.inspect('Suggested for you')");
 `;
 }
 
@@ -140,6 +195,7 @@ function parseArgs(argv) {
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === "--defaults") opts.defaults = true;
+    else if (a === "--all") opts.all = true;
     else if (a === "--hide") opts.hide = true;
     else if (a === "--experimental") opts.experimental = true;
     else if (a === "--mode") opts.mode = argv[++i];

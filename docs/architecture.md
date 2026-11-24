@@ -42,7 +42,7 @@ Native wraps each bundle as `(function(){ const __SR_CONFIG__ = {...}; <bundle> 
 
 | Layer | Module | World | Purpose |
 |---|---|---|---|
-| Router guard | `core/router.ts` | page | Wraps `pushState`/`replaceState`, listens for `popstate`/clicks, and enforces route rules and mode allowlists. Redirect targets must be same-origin. A sessionStorage loop breaker stops enforcing after 3 forced navigations in 10s. |
+| Router guard | `core/router.ts` | page | Wraps `pushState`/`replaceState`, listens for `popstate`/clicks, and enforces route rules and mode allowlists. In-app navigation to a filtered page is **inert** (nothing happens), because redirecting would force a full reload. Only page loads and back/forward redirect. Redirect targets must be same-origin. A sessionStorage loop breaker stops enforcing after 3 forced navigations in 10s. |
 | Network filter | `core/network.ts` | page | Wraps `fetch`/XHR and drops JSON array items matching predicates. Large integers are preserved exactly. A streamed XHR read mid-flight is never filtered. Unverified rules only run with `experimental`. |
 | DOM filter | `core/dom.ts` | isolated | Injected CSS (one rule per selector), plus a `MutationObserver` for `hideClosest` and `hideIfText` (one text walk per container). |
 | Counter | `core/counter.ts` | isolated | Counts each unique post once it has been ≥50% visible for 1s. Always runs; `postCounter` only controls whether native shows it. |

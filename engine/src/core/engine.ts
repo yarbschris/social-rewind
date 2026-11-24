@@ -56,7 +56,7 @@ export interface PageHandle {
 
 export interface PageDeps {
   win?: typeof globalThis;
-  router?: Pick<RouterHooks, "assign" | "replace">;
+  router?: Pick<RouterHooks, "replace">;
 }
 
 /** Hand an event to the isolated world through the shared DOM. */

@@ -2,7 +2,7 @@
   "$schema": "./schema/rule-pack.schema.json",
   "schemaVersion": 1,
   "platform": "instagram",
-  "revision": 2,
+  "revision": 3,
   "minEngineVersion": 1,
   "startPath": "/",
   "alwaysAllowRoutes": [
@@ -71,19 +71,18 @@
     },
     "blockExplore": {
       "title": "Block search posts",
-      "description": "Keeps account search but removes the Explore grid and post results.",
+      "description": "Keeps account search but hides the Explore grid and post results.",
       "group": "content",
       "default": true,
       "rules": {
         "css": [
-          "html[data-sr-path^=\"/explore/search\"] a[href*=\"/p/\"]",
-          "html[data-sr-path^=\"/explore/search\"] a[href*=\"/reel/\"]"
+          "html[data-sr-path^=\"/explore\"] a[href*=\"/p/\"]",
+          "html[data-sr-path^=\"/explore\"] a[href*=\"/reel/\"]"
         ],
         "routes": [
           {
-            "pattern": "^/explore(?:/(?!search/)|/?$)",
-            "action": "redirect",
-            "to": "/explore/search/"
+            "pattern": "^/explore/(?:tags|locations)/",
+            "action": "block"
           }
         ]
       }
@@ -101,9 +100,8 @@
         ],
         "routes": [
           {
-            "pattern": "^/(?:[^/]+/)?p/([^/]+)/comments(?:/|$)",
-            "action": "redirect",
-            "to": "/p/$1/"
+            "pattern": "^/(?:[^/]+/)?p/[^/]+/comments(?:/|$)",
+            "action": "block"
           }
         ]
       }

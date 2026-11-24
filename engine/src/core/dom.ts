@@ -33,13 +33,22 @@ export function buildCss(rules: ActiveRules, opts: DomOptions, onError: (m: stri
   const hide = opts.debug
     ? "outline: 3px dashed #e0245e !important; opacity: 0.35 !important;"
     : "display: none !important;";
+  // Debug: label each outlined element with the rule that matched it.
+  const label =
+    "font: 600 10px/1.2 ui-monospace, monospace !important; color: #fff !important; background: #e0245e !important;" +
+    " padding: 1px 3px !important; display: inline-block !important; opacity: 1 !important;";
   const lines: string[] = [];
   // One rule per selector: a single invalid selector in a list would void the whole list.
-  for (const { rule } of rules.css) {
-    if (isValidSelector(rule)) lines.push(`${rule} { ${hide} }`);
-    else onError(`invalid selector: ${rule}`);
+  for (const { id, rule } of rules.css) {
+    if (!isValidSelector(rule)) {
+      onError(`invalid selector: ${rule}`);
+      continue;
+    }
+    lines.push(`${rule} { ${hide} }`);
+    if (opts.debug && isValidSelector(`${rule}::before`)) lines.push(`${rule}::before { content: "SR ${id}" !important; ${label} }`);
   }
   lines.push(`[${HIDDEN_ATTR}] { ${hide} }`);
+  if (opts.debug) lines.push(`[${HIDDEN_ATTR}]::before { content: "SR " attr(${HIDDEN_ATTR}) !important; ${label} }`);
   if (opts.grayscale) lines.push("html { filter: grayscale(1) !important; }");
   return lines.join("\n");
 }

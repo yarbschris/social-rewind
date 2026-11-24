@@ -1,5 +1,5 @@
 import type { ActiveRules } from "./compile";
-import type { HideClosestRule, HideIfTextRule } from "./types";
+import type { DomRule, HideClosestRule, HideIfTextRule } from "./types";
 import { send } from "./bridge";
 
 export const HIDDEN_ATTR = "data-sr-hidden";
@@ -15,6 +15,8 @@ export interface DomHandle {
   /** Re-render CSS, un-hide elements whose rule is no longer active, and re-scan. */
   refresh(opts: DomOptions): void;
   setPath(path: string): void;
+  /** Re-evaluate route-scoped (`when`) rules after the path changed. */
+  pathChanged(): void;
   /** Apply DOM rules to a subtree (exposed for tests). */
   apply(root: ParentNode): void;
   uninstall(): void;
@@ -134,11 +136,27 @@ export function installDom(getRules: () => ActiveRules, initial: DomOptions, onE
     return set;
   };
 
+  const applies = (rule: DomRule): boolean => {
+    if (!rule.when) return true;
+    try {
+      return document.documentElement.matches(rule.when);
+    } catch {
+      return false;
+    }
+  };
+
+  /** Ids of DOM rules that may currently hide elements. */
+  const liveIds = (): Set<string> => new Set(getRules().dom.filter((r) => applies(r.rule)).map((r) => r.id));
+
   const apply = (root: ParentNode) => {
     const groups = new Map<string, TextRule[]>();
     for (const { id, rule } of getRules().dom) {
+      if (!applies(rule)) continue;
       if (rule.type === "hideClosest") applyClosest(root, id, rule);
-      else groups.set(rule.container, [...(groups.get(rule.container) ?? []), { id, rule }]);
+      else if (rule.type === "hideAllButFirst") {
+        // Document-wide by nature: "first" only means something globally.
+        within(document, rule.selector).slice(1).forEach((el) => hide(el, id));
+      } else groups.set(rule.container, [...(groups.get(rule.container) ?? []), { id, rule }]);
     }
     for (const [selector, group] of groups) {
       for (const c of containersFor(root, selector)) {
@@ -165,6 +183,14 @@ export function installDom(getRules: () => ActiveRules, initial: DomOptions, onE
     for (const t of targets) if (t.isConnected) apply(t);
   });
 
+  /** Show elements hidden by rules that are no longer enabled, or whose `when` stopped matching. */
+  const unhideStale = () => {
+    const live = liveIds();
+    for (const el of document.querySelectorAll(`[${HIDDEN_ATTR}]`)) {
+      if (!live.has(el.getAttribute(HIDDEN_ATTR) ?? "")) el.removeAttribute(HIDDEN_ATTR);
+    }
+  };
+
   const render = () => {
     style.textContent = buildCss(getRules(), opts, onError);
     ensureStyle();
@@ -182,10 +208,11 @@ export function installDom(getRules: () => ActiveRules, initial: DomOptions, onE
     refresh(next) {
       opts = next;
       render();
-      const active = getRules().ids;
-      for (const el of document.querySelectorAll(`[${HIDDEN_ATTR}]`)) {
-        if (!active.has(el.getAttribute(HIDDEN_ATTR) ?? "")) el.removeAttribute(HIDDEN_ATTR);
-      }
+      unhideStale();
+      apply(document);
+    },
+    pathChanged() {
+      unhideStale();
       apply(document);
     },
     setPath(path) {

@@ -161,8 +161,13 @@ export function startIsolated(initial: EngineConfig, deps: IsolatedDeps = {}): P
     const ev = sanitizePageEvent(html.getAttribute(EVENT_ATTR));
     if (ev) send(ev);
   };
-  const eventObserver = new MutationObserver(forward);
-  eventObserver.observe(html, { attributes: true, attributeFilter: [EVENT_ATTR] });
+  const eventObserver = new MutationObserver((records) => {
+    for (const r of records) {
+      if (r.attributeName === EVENT_ATTR) forward();
+      else if (r.attributeName === PATH_ATTR) dom?.pathChanged();
+    }
+  });
+  eventObserver.observe(html, { attributes: true, attributeFilter: [EVENT_ATTR, PATH_ATTR] });
   forward();
 
   // Identity: keep checking (throttled) so an account switch corrects a stale username.

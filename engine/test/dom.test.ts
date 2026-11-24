@@ -96,3 +96,44 @@ describe("debug labels", () => {
     expect(buildCss(compile(config()), { debug: false, grayscale: false })).not.toContain("::before");
   });
 });
+
+describe("route-scoped rules (when) and hideAllButFirst", () => {
+  let dom: DomHandle;
+  const reel = (id: string) => `<article data-id="${id}"><a href="/reel/${id}/">reel</a></article>`;
+  const hiddenIds = () => [...document.querySelectorAll(`[${HIDDEN_ATTR}]`)].map((e) => `${e.getAttribute("data-id")}:${e.getAttribute(HIDDEN_ATTR)}`);
+
+  beforeEach(() => {
+    document.documentElement.innerHTML = "<head></head><body><main></main></body>";
+  });
+  afterEach(() => dom.uninstall());
+
+  it("hides reels in the feed", async () => {
+    const rules = compile(config());
+    dom = installDom(() => rules, { debug: false, grayscale: false });
+    dom.setPath("/");
+    document.querySelector("main")!.innerHTML = reel("a") + post("1");
+    await flush();
+    expect(hiddenIds()).toEqual(["a:blockReels.dom0"]);
+  });
+
+  it("on a reel page keeps the first reel and hides the ones after it", async () => {
+    const rules = compile(config());
+    dom = installDom(() => rules, { debug: false, grayscale: false });
+    dom.setPath("/reel/a/");
+    document.querySelector("main")!.innerHTML = reel("a") + reel("b") + reel("c");
+    await flush();
+    expect(hiddenIds()).toEqual(["b:blockReels.dom1", "c:blockReels.dom1"]);
+  });
+
+  it("re-evaluates when the path changes", async () => {
+    const rules = compile(config());
+    dom = installDom(() => rules, { debug: false, grayscale: false });
+    dom.setPath("/");
+    document.querySelector("main")!.innerHTML = reel("a") + reel("b");
+    await flush();
+    expect(hiddenIds()).toEqual(["a:blockReels.dom0", "b:blockReels.dom0"]);
+    dom.setPath("/reel/a/");
+    dom.pathChanged();
+    expect(hiddenIds()).toEqual(["b:blockReels.dom1"]);
+  });
+});

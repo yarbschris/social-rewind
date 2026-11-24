@@ -192,6 +192,9 @@
             },
             "closest": {
               "$ref": "#/$defs/selector"
+            },
+            "when": {
+              "$ref": "#/$defs/selector"
             }
           }
         },
@@ -225,6 +228,28 @@
               ]
             },
             "within": {
+              "$ref": "#/$defs/selector"
+            },
+            "when": {
+              "$ref": "#/$defs/selector"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "type",
+            "selector"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "const": "hideAllButFirst"
+            },
+            "selector": {
+              "$ref": "#/$defs/selector"
+            },
+            "when": {
               "$ref": "#/$defs/selector"
             }
           }

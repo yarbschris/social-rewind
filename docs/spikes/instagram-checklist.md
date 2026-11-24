@@ -1,5 +1,13 @@
 # Instagram on-device spike checklist
 
+## Confirmed so far (Safari lab, iOS Simulator Safari, 2026-11-24)
+- ✅ **Injected `<style>` is not blocked by Instagram's CSP.** The lab reported "style sheet applied: yes".
+- ✅ **Filtered taps reloaded the page** when they redirected (comments, search). Fixed: in-app navigation to filtered pages is now inert.
+- ✅ **The search tab goes to `/explore/`.** Kept reachable for account search, with post tiles hidden.
+- ✅ **Swiping on from a reel shared in DMs shows further reels, each one matched by `blockReels`.** Decision: a shared reel may open, but you can't scroll on to more (`hideAllButFirst` on reel routes). Still to verify: the path when a shared reel opens, and the reel container markup.
+- ⬜ Suggested-accounts section: not matched yet. Need `inspect('Suggested for you')` output.
+- ⬜ Identity (username) detection: "no" on a DM page. Check on Home.
+
 Run on a physical iPhone with a development build. Turn on **Settings → Developer → Filter debug overlay** so hidden elements are outlined instead of removed.
 
 ## 0.2 Web view basics

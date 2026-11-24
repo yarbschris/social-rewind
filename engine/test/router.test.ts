@@ -29,10 +29,10 @@ describe("evaluateRoute (instagram)", () => {
     expect(evaluateRoute(path, normal).action).toBe(action);
   });
 
-  it("redirects the Reels tab home and blocks individual reels", () => {
+  it("redirects the Reels tab home but lets a single (shared) reel open", () => {
     expect(evaluateRoute("/reels/", normal)).toMatchObject({ action: "redirect", to: "/" });
-    expect(evaluateRoute("/reel/XYZ/", normal)).toMatchObject({ action: "block" });
-    expect(evaluateRoute("/someone/reel/XYZ/", normal)).toMatchObject({ action: "block" });
+    expect(evaluateRoute("/reel/XYZ/", normal).action).toBe("allow");
+    expect(evaluateRoute("/someone/reel/XYZ/", normal).action).toBe("allow");
   });
 
   it("keeps Explore reachable (for account search) but blocks tag and location grids", () => {
@@ -170,10 +170,10 @@ describe("installRouter", () => {
 
   it("pushState to a blocked route is swallowed and reported", () => {
     install();
-    history.pushState(null, "", "/reel/XYZ/");
+    history.pushState(null, "", "/explore/tags/cats/");
     expect(location.pathname).toBe("/");
     expect(navs).toEqual([]);
-    expect(events[0]).toMatchObject({ type: "routeBlocked", path: "/reel/XYZ/" });
+    expect(events[0]).toMatchObject({ type: "routeBlocked", path: "/explore/tags/cats/" });
   });
 
   it("allowed pushState goes through", () => {

@@ -77,17 +77,26 @@ export interface RuleSet {
   network?: NetworkRule[];
 }
 
-export type DomRule = HideClosestRule | HideIfTextRule;
+export type DomRule = HideClosestRule | HideIfTextRule | HideAllButFirstRule;
+
+/**
+ * Every DOM rule may carry `when`: a selector tested against <html>. The rule
+ * applies only while it matches, e.g. `html[data-sr-path^="/reel/"]` to scope a
+ * rule to a route. Elements a rule hid are shown again once `when` stops matching.
+ */
+interface Conditional {
+  when?: string;
+}
 
 /** Find `match`, hide its nearest ancestor matching `closest`. */
-export interface HideClosestRule {
+export interface HideClosestRule extends Conditional {
   type: "hideClosest";
   match: string;
   closest: string;
 }
 
 /** Hide `container` elements containing a text node whose trimmed value equals one of `text`. */
-export interface HideIfTextRule {
+export interface HideIfTextRule extends Conditional {
   type: "hideIfText";
   container: string;
   text: string[];
@@ -95,6 +104,12 @@ export interface HideIfTextRule {
   match?: "exact" | "prefix";
   /** Only consider text inside descendants of the container matching this selector (e.g. "header"). */
   within?: string;
+}
+
+/** Hide every element matching `selector` except the first in document order (e.g. "one reel, no scrolling on"). */
+export interface HideAllButFirstRule extends Conditional {
+  type: "hideAllButFirst";
+  selector: string;
 }
 
 export interface RouteRule {

@@ -2,7 +2,7 @@
   "$schema": "./schema/rule-pack.schema.json",
   "schemaVersion": 1,
   "platform": "instagram",
-  "revision": 3,
+  "revision": 4,
   "minEngineVersion": 1,
   "startPath": "/",
   "alwaysAllowRoutes": [
@@ -19,7 +19,7 @@
   "features": {
     "blockReels": {
       "title": "Block Reels",
-      "description": "Removes the Reels tab, Reels in your feed, and the Reels viewer.",
+      "description": "Removes the Reels tab and Reels in your feed. A reel someone sends you still opens, but you can't scroll on to more.",
       "group": "content",
       "default": true,
       "rules": {
@@ -31,7 +31,13 @@
           {
             "type": "hideClosest",
             "match": "article a[href*=\"/reel/\"]",
-            "closest": "article"
+            "closest": "article",
+            "when": "html:not([data-sr-path*=\"/reel/\"])"
+          },
+          {
+            "type": "hideAllButFirst",
+            "selector": "article:has(a[href*=\"/reel/\"])",
+            "when": "html[data-sr-path*=\"/reel/\"]"
           }
         ],
         "routes": [
@@ -39,10 +45,6 @@
             "pattern": "^/reels(?:/|$)",
             "action": "redirect",
             "to": "/"
-          },
-          {
-            "pattern": "^/(?:[^/]+/)?reel/[^/]+",
-            "action": "block"
           }
         ],
         "network": [

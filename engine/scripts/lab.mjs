@@ -123,6 +123,23 @@ function labRuntime(config) {
       );
       return chains.length;
     },
+    /** Structure above the first `n` elements matching `selector`, e.g. inspectSelector("[data-sr-hidden]"). */
+    inspectSelector(selector, n = 3, depth = 14) {
+      let els = [];
+      try {
+        els = [...document.querySelectorAll(selector)];
+      } catch {
+        console.log(`[Social Rewind lab] invalid selector ${selector}`);
+        return 0;
+      }
+      els.slice(0, n).forEach((el, i) => {
+        const chain = [];
+        for (let e = el, d = 0; e && e !== document.body && d < depth; e = e.parentElement, d++) chain.push(describe(e));
+        console.log(`#${i + 1} of ${els.length}: innermost first\n` + chain.map((s, j) => "  ".repeat(j) + s).join("\n"));
+      });
+      console.log(`[Social Rewind lab] path: ${location.pathname.replace(/\/(?!(p|reel|reels|explore|stories|direct|t|saved)\/)[^/]+/g, "/<x>")}`);
+      return els.length;
+    },
     /** Same, starting from an element (e.g. $0, the one selected in the Elements tab). */
     inspectElement(el, depth = 14) {
       const chain = [];

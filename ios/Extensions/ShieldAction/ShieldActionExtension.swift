@@ -17,9 +17,10 @@ final class ShieldActionExtension: ShieldActionDelegate {
         case .primaryButtonPressed:
             // nil if the token isn't in any saved selection; still open the app.
             let platform = SharedStore().platform(for: application)
+            // Callback API instead of async/await: Swift 6 rejects sending the
+            // non-Sendable completion handler into a Task.
             nonisolated(unsafe) let done = completionHandler
-            Task {
-                await Self.postOpenNotification(for: platform)
+            UNUserNotificationCenter.current().add(Self.openRequest(for: platform)) { _ in
                 done(.close)
             }
         case .secondaryButtonPressed:
@@ -41,7 +42,7 @@ final class ShieldActionExtension: ShieldActionDelegate {
         completionHandler(.close)
     }
 
-    private static func postOpenNotification(for platform: Platform?) async {
+    private static func openRequest(for platform: Platform?) -> UNNotificationRequest {
         let content = UNMutableNotificationContent()
         if let platform {
             content.title = "Open \(platform.displayName)"
@@ -55,9 +56,8 @@ final class ShieldActionExtension: ShieldActionDelegate {
         content.categoryIdentifier = NotificationKeys.openCategory
         content.interruptionLevel = .active // .timeSensitive would need an extra entitlement
 
-        let request = UNNotificationRequest(identifier: "open-\(platform?.rawValue ?? "app")",
-                                            content: content,
-                                            trigger: nil) // deliver now
-        try? await UNUserNotificationCenter.current().add(request)
+        return UNNotificationRequest(identifier: "open-\(platform?.rawValue ?? "app")",
+                                     content: content,
+                                     trigger: nil) // deliver now
     }
 }

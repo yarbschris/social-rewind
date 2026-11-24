@@ -219,5 +219,5 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     /* not macOS */
   }
   console.log(`Wrote ${out} (${(snippet.length / 1024).toFixed(1)} KB)${copied ? ", copied to clipboard" : ""}.`);
-  console.log(`Settings: mode=${opts.mode ?? "normal"}, features=${opts.defaults ? "defaults" : "all"}, ${opts.hide ? "hiding" : "outlining (debug)"}${opts.experimental ? ", experimental network rules" : ""}`);
+  console.log(`Settings: mode=${opts.mode ?? "normal"}, features=${opts.defaults ? "defaults" : opts.all ? "all" : "all except hideFeed"}, ${opts.hide ? "hiding" : "outlining (debug)"}${opts.experimental ? ", experimental network rules" : ""}`);
 }

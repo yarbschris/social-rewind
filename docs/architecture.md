@@ -59,9 +59,9 @@ What a pack **can't** do, and where that is enforced:
 | Guarantee | Schema (CI) | Engine | Native |
 |---|---|---|---|
 | No scripts and no host fields | ✅ (`additionalProperties: false`) | n/a: only known fields are read | ✅ Codable decode ignores unknown fields; the host allowlist is hardcoded |
-| Redirect targets and mode homes are same-origin paths | ✅ pattern | ✅ `isSafePath` + URL origin check, `$n` percent-encoded | 🚧 `RulePackSelector` (in progress) |
+| Redirect targets and mode homes are same-origin paths | ✅ pattern | ✅ `isSafePath` + URL origin check, `$n` percent-encoded | ✅ `RulePackSelector` (tested) |
 | Invalid regexes or selectors can't break the engine | n/a | ✅ dropped and reported | n/a |
-| Size caps (pack size, selector count, regex length) | n/a | n/a | 🚧 `RulePackSelector` (in progress) |
+| Size caps (pack size, selector count, regex length) | n/a | n/a | ✅ `RulePackSelector` (tested) |
 
 What a pack **can** still do: hide any element or drop any post that matches its selectors or predicates. A compromised repository could therefore censor content inside a platform, but it couldn't exfiltrate data or load other sites. **Refreshed packs must be ed25519-signed before rule refresh ships in a release** (see roadmap).
 

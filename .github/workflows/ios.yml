@@ -1,0 +1,45 @@
+name: iOS
+
+on:
+  push:
+    branches: [main]
+    paths: ["ios/**", "rules/**", "engine/**", "scripts/build-engine-for-ios.sh", ".github/workflows/ios.yml"]
+  pull_request:
+    paths: ["ios/**", "rules/**", "engine/**", "scripts/build-engine-for-ios.sh", ".github/workflows/ios.yml"]
+
+jobs:
+  rewindcore:
+    name: RewindCore tests
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: swift test
+        working-directory: ios/Packages/RewindCore
+        run: swift test
+
+  build:
+    name: Build app (simulator, unsigned)
+    runs-on: macos-15
+    needs: rewindcore
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          # Version comes from "packageManager" in engine/package.json.
+          package_json_file: engine/package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install XcodeGen
+        run: brew install xcodegen
+      - name: Generate project
+        working-directory: ios
+        run: xcodegen generate
+      - name: Build
+        working-directory: ios
+        run: |
+          xcodebuild build \
+            -project SocialRewind.xcodeproj \
+            -scheme SocialRewind \
+            -destination 'generic/platform=iOS Simulator' \
+            CODE_SIGNING_ALLOWED=NO

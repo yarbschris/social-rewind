@@ -1,0 +1,7 @@
+// Copy to Local.xcconfig (gitignored) and fill in.
+
+// Your 10-character Apple Developer Team ID (Xcode → Settings → Accounts).
+DEVELOPMENT_TEAM = ABCDE12345
+
+// Uncomment if app.socialrewind isn't registered to your team (forks, contributors).
+// SR_BUNDLE_PREFIX = com.yourname.socialrewind

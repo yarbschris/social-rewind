@@ -14,17 +14,17 @@ Legend: ✅ done · 🚧 in progress · ⬜ not started · ❓ needs a decision 
 - ✅ Repository, license, docs
 - ✅ Filter engine core: router guard, DOM filter, network filter, counter, bridge (85 unit tests)
 - ✅ Two-world split (page / isolated), config by closure, untrusted bridge (ADR 0004)
-- 🚧 Native URL-observer route backstop, with loop breaker
+- ✅ Native URL-observer route backstop, with loop breaker (unit-tested in RewindCore; not yet run on a device)
 - 🚧 Instagram rule pack v0 (selectors **unverified** until spikes 0.2/0.3)
-- 🚧 RewindCore Swift package: settings, rule packs, allowlist, config builder
-- 🚧 iOS app shell: onboarding, settings, browser, grayscale, counter UI, scroll reminders
+- ✅ RewindCore Swift package: settings, rule packs, allowlist, config builder, route guard (38 tests)
+- 🚧 iOS app shell: onboarding, settings, browser, grayscale, counter UI, scroll reminders (written; not yet compiled with Xcode)
 - 🚧 Screen Time extensions: shield UI, shield action
 - ⬜ App icon and visual design
 
 ## Phase 2: Robustness
 - ⬜ Filter debug overlay (outline hidden elements and show which rule matched)
 - ⬜ Scrubbed fixture capture tool, plus Playwright WebKit tests against fixtures
-- 🚧 Optional rule refresh (fetch, validate, version-gate, fall back). Native validation, including same-origin targets and size caps, is in progress.
+- 🚧 Optional rule refresh (fetch, validate, version-gate, fall back). Native validation (same-origin targets, size caps) is done.
 - ⬜ **ed25519-signed rule packs. Required before rule refresh ships in a release.**
 - ⬜ Hard features: story ads, reposts, AI-labeled posts
 - ⬜ Localized text matches (non-English UI), and locale-independent identity detection

@@ -23,6 +23,11 @@ import { ENGINE_VERSION, type BridgeEvent, type EngineConfig, type IdentityDef, 
 export const EVENT_ATTR = "data-sr-event";
 const USERNAME_RE = /^[A-Za-z0-9._]{1,30}$/;
 
+/** User scripts run on every main-frame origin (e.g. Facebook login); act only on the platform's own hosts. */
+export function onPlatformHost(config: EngineConfig, hostname = location.hostname): boolean {
+  return !config.hosts || config.hosts.includes(hostname);
+}
+
 function compatible(config: EngineConfig, onError: (m: string) => void): boolean {
   if (config.rules?.schemaVersion !== 1 || config.rules.minEngineVersion > ENGINE_VERSION) {
     onError(`incompatible rule pack (schema ${config.rules?.schemaVersion}, needs engine ${config.rules?.minEngineVersion})`);
@@ -64,6 +69,7 @@ function postToIsolated(event: BridgeEvent): void {
 }
 
 export function startPage(config: EngineConfig, deps: PageDeps = {}): PageHandle | null {
+  if (!onPlatformHost(config)) return null;
   const onError = (message: string) => postToIsolated({ type: "error", message });
   if (!compatible(config, onError)) return null;
 
@@ -133,6 +139,7 @@ export function sanitizePageEvent(raw: string | null): BridgeEvent | null {
 }
 
 export function startIsolated(initial: EngineConfig, deps: IsolatedDeps = {}): PublicApi | null {
+  if (!onPlatformHost(initial)) return null;
   const onError = (message: string) => send({ type: "error", message });
   if (!compatible(initial, onError)) return null;
 

@@ -26,6 +26,8 @@ export interface PlatformSettings {
 
 export interface EngineConfig {
   platform: string;
+  /** Hostnames the engine may act on (from native's hardcoded allowlist). Elsewhere it stays inert. */
+  hosts?: string[];
   settings: PlatformSettings;
   rules: RulePack;
   /** Known account handle (for templated mode homes such as "/{username}/saved/"). */

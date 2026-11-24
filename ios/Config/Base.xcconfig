@@ -1,0 +1,11 @@
+// Shared build settings. Per-developer overrides go in Local.xcconfig (gitignored).
+// Copy Local.xcconfig.example to Local.xcconfig and set your team.
+
+// Bundle ID prefix for the app and its extensions. Forks must change this, since
+// bundle IDs and App Groups are unique per Apple developer account.
+SR_BUNDLE_PREFIX = app.socialrewind
+SR_APP_GROUP = group.$(SR_BUNDLE_PREFIX)
+
+DEVELOPMENT_TEAM =
+
+#include? "Local.xcconfig"

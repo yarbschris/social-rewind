@@ -1,6 +1,6 @@
 import { onSend } from "../src/core/bridge";
 import { compile } from "../src/core/compile";
-import { EVENT_ATTR, resolveIdentity, sanitizePageEvent, startIsolated } from "../src/core/engine";
+import { EVENT_ATTR, onPlatformHost, resolveIdentity, sanitizePageEvent, startIsolated, startPage } from "../src/core/engine";
 import type { BridgeEvent } from "../src/core/types";
 import { config, loadPack, settings } from "./helpers";
 
@@ -55,6 +55,27 @@ describe("page → isolated events", () => {
     await flush();
     expect(events.map((e) => e.type)).toEqual(expect.arrayContaining(["ready", "routeBlocked"]));
     api?.stop();
+    off();
+  });
+});
+
+describe("platform hosts", () => {
+  it("acts only on the platform's own hosts", () => {
+    const c = config({ hosts: ["instagram.com", "www.instagram.com"] });
+    expect(onPlatformHost(c, "www.instagram.com")).toBe(true);
+    expect(onPlatformHost(c, "www.facebook.com")).toBe(false);
+    expect(onPlatformHost(config(), "anything.example")).toBe(true); // no list → legacy behavior
+  });
+
+  it("both worlds stay inert off-host (no ready, no patches)", () => {
+    const events: BridgeEvent[] = [];
+    const off = onSend((e) => events.push(e));
+    const push = history.pushState;
+    const c = config({ hosts: ["www.facebook.com"] }); // test document is www.instagram.com
+    expect(startIsolated(c)).toBeNull();
+    expect(startPage(c)).toBeNull();
+    expect(history.pushState).toBe(push);
+    expect(events).toEqual([]);
     off();
   });
 });

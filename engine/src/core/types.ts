@@ -93,6 +93,12 @@ interface Conditional {
    * where you want loading to stop, such as the reels after a shared one.
    */
   collapse?: boolean;
+  /**
+   * Also hide the wrappers around the target: climb while the parent has no other
+   * element child, and hide the outermost. Use it when the wrappers keep their
+   * height and leave a gap (Instagram's stories row, the DM notes row).
+   */
+  withWrappers?: boolean;
 }
 
 /** Find `match`, hide its nearest ancestor matching `closest`. */
@@ -100,12 +106,6 @@ export interface HideClosestRule extends Conditional {
   type: "hideClosest";
   match: string;
   closest: string;
-  /**
-   * Also hide the wrappers around the target: climb while the parent has no other
-   * element child, and hide the outermost. Use it when the wrappers keep their
-   * height and leave a gap (Instagram's stories row).
-   */
-  withWrappers?: boolean;
 }
 
 /** Hide `container` elements containing a text node whose trimmed value equals one of `text`. */

@@ -133,7 +133,8 @@ export function installDom(getRules: () => ActiveRules, initial: DomOptions, onE
     if (!style.isConnected) (document.head ?? document.documentElement).appendChild(style);
   };
 
-  const hide = (el: Element, id: string, rule: DomRule) => {
+  const hide = (target: Element, id: string, rule: DomRule) => {
+    const el = rule.withWrappers ? outermostWrapper(target) : target;
     if (el.hasAttribute(HIDDEN_ATTR)) return;
     el.setAttribute(HIDDEN_ATTR, id);
     if (rule.collapse) el.setAttribute(COLLAPSE_ATTR, "");
@@ -157,7 +158,7 @@ export function installDom(getRules: () => ActiveRules, initial: DomOptions, onE
   const applyClosest = (root: ParentNode, id: string, rule: HideClosestRule) => {
     for (const m of within(root, rule.match)) {
       const target = m.closest(rule.closest);
-      if (target) hide(rule.withWrappers ? outermostWrapper(target) : target, id, rule);
+      if (target) hide(target, id, rule);
     }
   };
 

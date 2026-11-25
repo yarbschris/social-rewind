@@ -2,7 +2,7 @@
   "$schema": "./schema/rule-pack.schema.json",
   "schemaVersion": 1,
   "platform": "instagram",
-  "revision": 16,
+  "revision": 17,
   "minEngineVersion": 2,
   "startPath": "/",
   "alwaysAllowRoutes": [
@@ -161,7 +161,8 @@
             "text": [
               "Your note"
             ],
-            "when": "html[data-sr-path^=\"/direct/\"]"
+            "when": "html[data-sr-path^=\"/direct/\"]",
+            "withWrappers": true
           },
           {
             "type": "hideIfText",
@@ -169,7 +170,8 @@
             "text": [
               "Your note"
             ],
-            "when": "html[data-sr-path^=\"/direct/\"]"
+            "when": "html[data-sr-path^=\"/direct/\"]",
+            "withWrappers": true
           }
         ]
       }

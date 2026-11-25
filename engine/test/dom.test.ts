@@ -246,8 +246,12 @@ describe("rev 9: suggested accounts and notes", () => {
     expect(document.querySelectorAll(`[${HIDDEN_ATTR}]`).length).toBe(0);
     dom.setPath("/direct/inbox/");
     dom.pathChanged();
-    // The row (list plus its scroll arrows) goes; the list rule is the fallback for rows without arrows.
-    expect([...document.querySelectorAll(`[${HIDDEN_ATTR}]`)].map((e) => `${e.id}:${e.getAttribute(HIDDEN_ATTR)}`)).toEqual(["row:hideNotes.dom0", "notes:hideNotes.dom1"]);
+    // The row (list plus its scroll arrows) goes, wrappers included; the list rule is the
+    // fallback for rows without arrows. The thread list stays.
+    const hiddenRoot = (id: string) => !!document.getElementById(id)!.closest(`[${HIDDEN_ATTR}]`);
+    expect(hiddenRoot("row")).toBe(true);
+    expect(document.querySelector("#row")!.closest(`[${HIDDEN_ATTR}]`)!.getAttribute(HIDDEN_ATTR)).toBe("hideNotes.dom0");
+    expect(hiddenRoot("threads")).toBe(false);
   });
 });
 
@@ -334,5 +338,28 @@ describe("rev 16: stories row takes its wrappers with it", () => {
       '<div id="feed"><article><a href="/p/A/">post</a></article></div></div></main>';
     await flush();
     expect([...document.querySelectorAll(`[${HIDDEN_ATTR}]`)].map((e) => e.id)).toEqual(["w5"]);
+  });
+});
+
+describe("rev 17: notes row takes its wrappers with it", () => {
+  let dom: DomHandle;
+  afterEach(() => dom.uninstall());
+
+  it("hides the row's single-child wrapper, keeping the thread list", async () => {
+    document.documentElement.innerHTML = "<head></head><body></body>";
+    const rules = compile(config({ settings: settings({ features: { hideNotes: true } }) }));
+    dom = installDom(() => rules, { debug: false, grayscale: false });
+    dom.setPath("/direct/inbox/");
+    dom.pathChanged();
+    // Live shape: div(3) > div(1) > row(2: presentation + Next button), next to the thread list.
+    document.body.innerHTML =
+      '<div id="inbox"><div id="search"></div><div id="wrap"><div id="row"><div role="presentation"><div><ul><li><div role="button"><span>Your note</span></div></li></ul></div></div>' +
+      '<button aria-label="Next"></button></div></div><div id="threads"><ul><li>chat</li></ul></div></div>';
+    await flush();
+    // Outermost hidden element is the wrapper; the list fallback only marks things inside it.
+    const outer = [...document.querySelectorAll(`[${HIDDEN_ATTR}]`)].filter((e) => !e.parentElement!.closest(`[${HIDDEN_ATTR}]`));
+    expect(outer.map((e) => e.id)).toEqual(["wrap"]);
+    expect(document.getElementById("threads")!.closest(`[${HIDDEN_ATTR}]`)).toBeNull();
+    expect(document.getElementById("search")!.hasAttribute(HIDDEN_ATTR)).toBe(false);
   });
 });

@@ -19,11 +19,16 @@ struct SocialRewindApp: App {
 
 struct RootView: View {
     @Environment(AppModel.self) private var model
+    #if DEBUG
+    @State private var debugScreen = DebugScreen.requested
+    #endif
 
     var body: some View {
         #if DEBUG
-        if let screen = DebugScreen.requested {
+        if let screen = debugScreen {
             DebugScreenView(screen: screen)
+                // Finishing onboarding from a debug screen continues into the real app.
+                .onChange(of: model.onboardingComplete) { _, done in if done { debugScreen = nil } }
         } else {
             main
         }

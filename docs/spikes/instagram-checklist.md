@@ -44,7 +44,7 @@ For each one, note the selector/label you'd use, or "not present on mobile web":
 - [ ] Story ads
 - [ ] Navigation bar profile link (used to detect the username for Saved-only mode)
 
-- ⬜ **Saved reels** (rev 14): Saved posts only now lets `/reel/` open (a saved reel used to reload to the saved page). The reel-viewer rule (`blockReels.dom2`) also covers `/reel/` pages, assuming they use the same viewer markup as DMs. Check that swiping past a saved reel goes nowhere.
+- ✅ **Saved reels** (rev 14, confirmed: Saved posts only works, saved reels open): Saved posts only now lets `/reel/` open (a saved reel used to reload to the saved page). The reel-viewer rule (`blockReels.dom2`) also covers `/reel/` pages, assuming they use the same viewer markup as DMs. Check that swiping past a saved reel goes nowhere.
 
 ## Requested next
 - ✅ **Suggested accounts** (rev 9, confirmed gone; `hideSuggestedAccounts`, its own toggle): the block's "See all" link goes to `/explore/people/` (now redirected home). Rule: the grandparent of that link (header row plus card carousel). The 20 "Suggested for you" text nodes found were all in feed reels, already hidden. Check that `hideSuggestedAccounts.css0` is exactly 1 per block and the whole carousel goes.

@@ -12,9 +12,9 @@
 - ✅ **Identity:** rev 5 nav-scoped detection works.
 - ✅ **Nav icons and action buttons** are `svg[role="img"][aria-label="…"]` → `span` → `div` → `div[role="button"]` (Home, Explore, Reels, Messages, Like…).
 - ✅ The XHR "access control checks" errors are Instagram's own, logged during reload before our snippet runs.
-- ❌ **Comment buttons:** rev 5 matched nothing (wrong nesting). Rev 6 targets the real structure; needs re-checking.
-- ⬜ **Shared reel viewer:** the lab only outlines, so scrolling still works there by design. Need the path and `blockReels.dom1` count on the reel page.
-- ❌ **Stories tray:** `hideStories` matched nothing.
+- ❌ **Comment buttons:** rev 6's nesting guess matched nothing; only the bare `svg[aria-label="Comment"]` matched (9 in the reel viewer), and an svg can't show a debug label. Rev 7 walks up from the icon to the nearest `[role="button"]` (`hideComments.dom0`). Needs re-checking: the labelled box should be icon-sized.
+- ❌ **Shared reel viewer (from DMs):** the path stays on the DM thread (`/direct/t/<id>/`), there are 0 `article`s, 9 `video`s and 18 `a[href^="/reels/<…>"]` links, so neither reel DOM rule fires. Video #1 is nested differently from #2–#3. Open: did Instagram push a `/reels/` URL that our router swallowed (look for `[SR] routeBlocked`), and what are the 18 links (`/reels/<id>/` or `/reels/audio/…`)?
+- ❌ **Stories tray:** no `/stories/` links. Bubbles are `div[role="button"][aria-label^="Story by"]`, all direct children of one tray `div` under `main`. Rev 7 hides a div with a story button as its 2nd child (so a single story ring on a post avatar is skipped). English-only label; needs a locale-free signal before localization. Should match exactly 1 on Home.
 - ❌ **Identity:** not detected with `[role=navigation]`. Rev 5 searches inside the nav bar (the common ancestor of the Home and Inbox links). Needs re-checking.
 
 Run on a physical iPhone with a development build. Turn on **Settings → Developer → Filter debug overlay** so hidden elements are outlined instead of removed.
@@ -48,7 +48,7 @@ For each one, note the selector/label you'd use, or "not present on mobile web":
 Each of these came from a reviewer's memory of Instagram, so it's as unverified as the original rules.
 - [ ] **Swallowed `pushState`:** when a blocked route is pushed (for example, a reel opened from a DM via a button), does Instagram render the blocked view anyway? If so, check that the native URL observer catches it.
 - [ ] **Hide feed and runaway pagination:** with `hideFeed` on, does the Network tab show feed pages loading endlessly? If so, hide the feed container (sentinel included), or block the feed request natively.
-- [ ] **Stories tray markup:** are tray items `a[href^="/stories/"]` links or buttons? Does `ul:has(> li a[href^="/stories/"])` match the tray?
+- [x] **Stories tray markup:** buttons, not links (see above).
 - [ ] **Suggested-accounts carousel:** does the `main div:has(> div > a[href^="/explore/people/"])` rule hide the whole carousel or only its header?
 - [ ] **"Ad" false positives:** do comment previews or captions ever render "Ad" or "Sponsored" as a standalone text node inside an `article`? If so, scope the rule with `within: "header"`, using whatever the real header element is.
 - [ ] **Posts after "You're all caught up":** do they carry a per-post "Suggested" label at all?

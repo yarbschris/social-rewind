@@ -2,7 +2,7 @@
   "$schema": "./schema/rule-pack.schema.json",
   "schemaVersion": 1,
   "platform": "instagram",
-  "revision": 6,
+  "revision": 7,
   "minEngineVersion": 1,
   "startPath": "/",
   "alwaysAllowRoutes": [
@@ -98,13 +98,19 @@
           "a[href*=\"/comments/\"]",
           "textarea[aria-label*=\"comment\" i]",
           "form:has(> textarea[aria-label*=\"comment\" i])",
-          "div[role=\"button\"]:has(> div > span > svg[aria-label=\"Comment\" i])",
           "svg[aria-label=\"Comment\" i]"
         ],
         "routes": [
           {
             "pattern": "^/(?:[^/]+/)?p/[^/]+/comments(?:/|$)",
             "action": "block"
+          }
+        ],
+        "dom": [
+          {
+            "type": "hideClosest",
+            "match": "svg[aria-label=\"Comment\" i]",
+            "closest": "[role=\"button\"], button"
           }
         ]
       }
@@ -115,7 +121,7 @@
       "default": false,
       "rules": {
         "css": [
-          "ul:has(> li a[href^=\"/stories/\"])",
+          "div:has(> div[role=\"button\"][aria-label^=\"Story by\"]:nth-child(2))",
           "a[href^=\"/stories/\"]"
         ],
         "routes": [

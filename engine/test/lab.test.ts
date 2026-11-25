@@ -38,7 +38,7 @@ describe("Safari lab helpers", () => {
 
   it("inspect() prints structure without text content or usernames", async () => {
     document.documentElement.innerHTML =
-      '<head></head><body><main><div role="list"><a href="/alice/" aria-label="alice"><span>Suggested for you</span></a></div></main></body>';
+      '<head></head><body><main><div role="list"><div role="button" aria-label="Story by alice.b, seen"><a href="/alice/" aria-label="alice"><span>Suggested for you</span></a></div></div></main></body>';
     (window as unknown as { __socialRewindLab?: boolean }).__socialRewindLab = false;
     const snippet: string = await makeSnippet(loadPack("instagram"));
     const lines: string[] = [];
@@ -47,9 +47,10 @@ describe("Safari lab helpers", () => {
     const lab = (window as unknown as { SocialRewindLab: { inspect(t: string): number } }).SocialRewindLab;
     expect(lab.inspect("Suggested for you")).toBe(1);
     const out = lines.join("\n");
-    expect(out).toContain('a[aria-label="alice"][href~"/<user>/"]');
+    expect(out).toContain('a[aria-label="<w>"][href~"/<user>/"]');
+    expect(out).toContain('div[role="button"][aria-label="Story by <w>, seen"]');
     expect(out).toContain('div[role="list"]');
-    expect(out).not.toContain("/alice/");
+    expect(out).not.toContain("alice");
     log.mockRestore();
   });
 });

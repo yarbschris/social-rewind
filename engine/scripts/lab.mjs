@@ -85,7 +85,7 @@ function labRuntime(config) {
 
   // Structure only: tags, roles, ARIA labels (truncated), href *patterns*. No text content,
   // so the output is safe to share. Usernames in hrefs are replaced with <user>.
-  const KNOWN = new Set(["p", "reel", "reels", "explore", "stories", "direct", "inbox", "t", "accounts", "saved", "people", "tags", "create", "search", "comments", "highlights"]);
+  const KNOWN = new Set(["p", "reel", "reels", "explore", "stories", "direct", "inbox", "t", "accounts", "saved", "people", "tags", "create", "search", "comments", "highlights", "audio"]);
   const hrefPattern = (href) => {
     if (!href) return null;
     try {
@@ -98,11 +98,22 @@ function labRuntime(config) {
       return "?";
     }
   };
+  // ARIA labels often contain handles and display names ("Story by <someone>"). Default-deny:
+  // keep common UI words, mask every other word.
+  const UI_WORDS = new Set(("a about account accounts ad add ads ai all and audio avatar back by call camera carousel chat clip " +
+    "close comment comments conversation copy create delete details direct dismiss edit emoji explore follow followers following for " +
+    "from gallery gif hide highlight highlights home icon image in inbox info is label like likes link live loading menu message " +
+    "messages more mute new next notifications of on open options pause photo picture play post posts previous profile reel reels " +
+    "remove replies reply report requests save saved search see seen send settings share show sound sponsored sticker stories story " +
+    "suggested tag tagged tags the to toggle unfollow unlike unmute unseen user verified video view voice with you your").split(" "));
+  const maskLabel = (v) => v.replace(/[\p{L}\p{N}._'’-]+/gu, (w) => (UI_WORDS.has(w.toLowerCase()) ? w : "<w>"));
   const describe = (el) => {
     let s = el.tagName.toLowerCase();
     for (const a of ["role", "aria-label", "aria-hidden", "data-sr-hidden", "tabindex"]) {
-      const v = el.getAttribute(a);
-      if (v !== null) s += `[${a}="${v.length > 32 ? v.slice(0, 32) + "…" : v}"]`;
+      let v = el.getAttribute(a);
+      if (v === null) continue;
+      if (a === "aria-label") v = maskLabel(v);
+      s += `[${a}="${v.length > 40 ? v.slice(0, 40) + "…" : v}"]`;
     }
     const href = hrefPattern(el.getAttribute("href"));
     if (href) s += `[href~"${href}"]`;
@@ -144,7 +155,7 @@ function labRuntime(config) {
         for (let e = el, d = 0; e && e !== document.body && d < depth; e = e.parentElement, d++) chain.push(describe(e));
         console.log(`#${i + 1} of ${els.length}: innermost first\n` + chain.map((s, j) => "  ".repeat(j) + s).join("\n"));
       });
-      console.log(`[Social Rewind lab] path: ${location.pathname.replace(/\/(?!(p|reel|reels|explore|stories|direct|t|saved)\/)[^/]+/g, "/<x>")}`);
+      console.log(`[Social Rewind lab] path: ${hrefPattern(location.pathname)}`);
       return els.length;
     },
     /** Same, starting from an element (e.g. $0, the one selected in the Elements tab). */
@@ -200,7 +211,7 @@ function labRuntime(config) {
       console.log(
         "%cSocial Rewind lab",
         "font-weight:bold",
-        `\n  path: ${document.documentElement.getAttribute("data-sr-path") ?? location.pathname}` +
+        `\n  path: ${hrefPattern(document.documentElement.getAttribute("data-sr-path") ?? location.pathname)}` +
           `\n  style sheet applied: ${cssRules ? `yes (${cssRules} rules)` : "NO (blocked by the site's Content-Security-Policy?)"}` +
           `\n  username detected: ${usernameSummary}` +
           `\n  posts counted: ${window.SocialRewind?.postsViewed?.() ?? "n/a"}` +

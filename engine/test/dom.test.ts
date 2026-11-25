@@ -137,3 +137,28 @@ describe("route-scoped rules (when) and hideAllButFirst", () => {
     expect(hiddenIds()).toEqual(["b:blockReels.dom1"]);
   });
 });
+
+describe("rev 7 rules from live markup", () => {
+  let dom: DomHandle;
+  afterEach(() => dom.uninstall());
+
+  it("hides the comment button by walking up from its icon", async () => {
+    document.documentElement.innerHTML = "<head></head><body><main></main></body>";
+    const rules = compile(config({ settings: settings({ features: { hideComments: true } }) }));
+    dom = installDom(() => rules, { debug: false, grayscale: false });
+    document.querySelector("main")!.innerHTML =
+      '<article><div role="button" data-id="like"><div><span><svg aria-label="Like"></svg></span></div></div>' +
+      '<div role="button" data-id="comment"><div><div><span><svg aria-label="Comment"></svg></span></div></div></div></article>';
+    await flush();
+    expect([...document.querySelectorAll(`[${HIDDEN_ATTR}]`)].map((e) => e.getAttribute("data-id"))).toEqual(["comment"]);
+  });
+
+  it("targets the stories tray, not a single story ring", () => {
+    const rules = compile(config({ settings: settings({ features: { hideStories: true } }) }));
+    const tray = rules.css.find((c) => c.id === "hideStories.css0")!.rule;
+    document.documentElement.innerHTML =
+      '<head></head><body><main><div id="tray"><div role="button" aria-label="Story by a, seen"></div><div role="button" aria-label="Story by b"></div></div>' +
+      '<article><header><div id="ring"><div role="button" aria-label="Story by c"></div></div></header></article></main></body>';
+    expect([...document.querySelectorAll(tray)].map((e) => e.id)).toEqual(["tray"]);
+  });
+});

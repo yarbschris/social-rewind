@@ -228,7 +228,9 @@ describe("rev 9: suggested accounts and notes", () => {
     document.documentElement.innerHTML = "<head></head><body><main></main></body>";
     const rules = compile(config({ settings: settings({ features: { hideNotes: true } }) }));
     dom = installDom(() => rules, { debug: false, grayscale: false });
-    const html = '<ul id="notes"><li><div role="button"><span>Your note</span></div></li></ul><ul id="threads"><li>chat</li></ul>';
+    const html =
+      '<div id="inbox"><div><div id="row"><div role="presentation"><div><ul id="notes"><li><div role="button"><span>Your note</span></div></li></ul></div></div>' +
+      '<button aria-label="Next"><div></div></button></div></div><ul id="threads"><li>chat</li></ul></div>';
     dom.setPath("/");
     dom.pathChanged();
     document.querySelector("main")!.innerHTML = html;
@@ -236,6 +238,7 @@ describe("rev 9: suggested accounts and notes", () => {
     expect(document.querySelectorAll(`[${HIDDEN_ATTR}]`).length).toBe(0);
     dom.setPath("/direct/inbox/");
     dom.pathChanged();
-    expect([...document.querySelectorAll(`[${HIDDEN_ATTR}]`)].map((e) => e.id)).toEqual(["notes"]);
+    // The row (list plus its scroll arrows) goes; the list rule is the fallback for rows without arrows.
+    expect([...document.querySelectorAll(`[${HIDDEN_ATTR}]`)].map((e) => `${e.id}:${e.getAttribute(HIDDEN_ATTR)}`)).toEqual(["row:hideNotes.dom0", "notes:hideNotes.dom1"]);
   });
 });

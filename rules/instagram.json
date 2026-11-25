@@ -2,7 +2,7 @@
   "$schema": "./schema/rule-pack.schema.json",
   "schemaVersion": 1,
   "platform": "instagram",
-  "revision": 9,
+  "revision": 10,
   "minEngineVersion": 2,
   "startPath": "/",
   "alwaysAllowRoutes": [
@@ -146,6 +146,14 @@
       "default": false,
       "rules": {
         "dom": [
+          {
+            "type": "hideIfText",
+            "container": "div:has(> div[role=\"presentation\"] > div > ul):has(> button)",
+            "text": [
+              "Your note"
+            ],
+            "when": "html[data-sr-path^=\"/direct/\"]"
+          },
           {
             "type": "hideIfText",
             "container": "ul",

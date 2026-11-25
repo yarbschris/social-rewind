@@ -46,7 +46,7 @@ For each one, note the selector/label you'd use, or "not present on mobile web":
 
 ## Requested next
 - ⬜ **Suggested accounts** (rev 9, `hideSuggestedAccounts`, its own toggle): the block's "See all" link goes to `/explore/people/` (now redirected home). Rule: the grandparent of that link (header row plus card carousel). The 20 "Suggested for you" text nodes found were all in feed reels, already hidden. Check that `hideSuggestedAccounts.css0` is exactly 1 per block and the whole carousel goes.
-- ⬜ **Notes tray in DMs** (rev 9, `hideNotes`, off by default): a `ul` of `li > div[role="button"]` bubbles; the user's own is labelled "Your note". Rule: hide the `ul` containing that text on `/direct/` paths. English-only, and it won't fire if the user's own bubble is missing.
+- ⬜ **Notes tray in DMs** (rev 9, `hideNotes`, off by default): a `ul` of `li > div[role="button"]` bubbles; the user's own is labelled "Your note". Confirmed hidden (rev 9), but its scroll arrows (`button[aria-label="Next"]`, then a left one) are siblings of the list's `div[role="presentation"]` wrapper and stayed. Rev 10 hides the div holding both, keeping the `ul` rule as a fallback for rows too short to need arrows. English-only, and it won't fire if the user's own bubble is missing.
 
 ## Open questions from the engine review (verify, don't assume)
 Each of these came from a reviewer's memory of Instagram, so it's as unverified as the original rules.

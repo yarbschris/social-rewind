@@ -318,3 +318,21 @@ describe("rev 13: feed posts collapse instead of display:none", () => {
     expect(buildCss(compile(config()), { debug: true, grayscale: false })).not.toContain(COLLAPSE_ATTR);
   });
 });
+
+describe("rev 16: stories row takes its wrappers with it", () => {
+  let dom: DomHandle;
+  afterEach(() => dom.uninstall());
+
+  it("hides the outermost single-child wrapper, not the shared parent", async () => {
+    document.documentElement.innerHTML = "<head></head><body></body>";
+    const rules = compile(config({ settings: settings({ features: { hideStories: true } }) }));
+    dom = installDom(() => rules, { debug: false, grayscale: false });
+    // Live shape: main > … > div(2) > div(1) ×5 > tray(10 story buttons)
+    const stories = '<div role="button" aria-label="Story by a"></div><div role="button" aria-label="Story by b"></div>';
+    document.body.innerHTML =
+      `<main><div id="shared"><div id="w5"><div><div><div><div id="w1"><div id="tray">${stories}</div></div></div></div></div></div>` +
+      '<div id="feed"><article><a href="/p/A/">post</a></article></div></div></main>';
+    await flush();
+    expect([...document.querySelectorAll(`[${HIDDEN_ATTR}]`)].map((e) => e.id)).toEqual(["w5"]);
+  });
+});

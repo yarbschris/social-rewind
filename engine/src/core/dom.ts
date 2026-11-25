@@ -110,6 +110,13 @@ function within(root: ParentNode, selector: string): Element[] {
   return out;
 }
 
+/** Climb from `el` while the parent has no other element child. Stops below <main>, <body> and <html>. */
+function outermostWrapper(el: Element): Element {
+  let w = el;
+  for (let p = w.parentElement; p && p.childElementCount === 1 && !p.matches("main, body, html"); p = p.parentElement) w = p;
+  return w;
+}
+
 /** The largest ancestor of `el` (or `el` itself) that doesn't contain `keep`. Never <body>/<html>. */
 function branchOf(el: Element, keep: Element): Element {
   let b = el;
@@ -150,7 +157,7 @@ export function installDom(getRules: () => ActiveRules, initial: DomOptions, onE
   const applyClosest = (root: ParentNode, id: string, rule: HideClosestRule) => {
     for (const m of within(root, rule.match)) {
       const target = m.closest(rule.closest);
-      if (target) hide(target, id, rule);
+      if (target) hide(rule.withWrappers ? outermostWrapper(target) : target, id, rule);
     }
   };
 

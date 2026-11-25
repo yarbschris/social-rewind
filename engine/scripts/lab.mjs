@@ -80,7 +80,7 @@ function labRuntime(config, KNOWN_SEGMENTS) {
             ? `${r.container} ∋ ${JSON.stringify(r.text)}`
             : r.type === "hideAllButFirst"
               ? `all but first ${r.selector}${r.branch ? " (whole branch)" : ""}`
-              : `${r.match} → ${r.closest}`,
+              : `${r.match} → ${r.closest}${r.withWrappers ? " (+ wrappers)" : ""}`,
       });
     });
     return rows;

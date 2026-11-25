@@ -198,6 +198,9 @@
             },
             "collapse": {
               "type": "boolean"
+            },
+            "withWrappers": {
+              "type": "boolean"
             }
           }
         },

@@ -65,4 +65,4 @@ Each of these came from a reviewer's memory of Instagram, so it's as unverified 
 - [ ] **Identity detection:** does the profile-picture alt text vary by locale? Is there a locale-free signal?
 - [ ] **`/explore/search/`:** is it a real standalone route on mobile web?
 - [ ] **`product_type: "clips"`:** is it only on Reels, or also on saved and profile videos?
-- [ ] **Grayscale:** does `filter: grayscale(1)` on `<html>` hurt scrolling, video, or fixed-position elements in WebKit? If so, do grayscale natively.
+- [x] **Grayscale:** `filter: grayscale(1)` on `<html>` is fine in WebKit (iOS Simulator Safari). Fixed bars stay put, scrolling is smooth, feed and DM videos play, and DMs, posts and menus are all gray. No need to do it natively.

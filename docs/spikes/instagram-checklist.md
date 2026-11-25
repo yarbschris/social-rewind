@@ -40,7 +40,7 @@ For each one, note the selector/label you'd use, or "not present on mobile web":
 - [ ] "Sponsored" label
 - [ ] "Suggested for you" posts and the suggested-accounts carousel
 - [ ] Reposts label
-- [x] AI label: the live wording is **"AI content"**, a text node in a `button` inside the post `article` (3 of 3). Rev 19 adds it next to "AI info" and "Made with AI".
+- [x] AI label: the live wording is **"AI content"**, a text node in a `button` inside the post `article` (3 of 3). Rev 19 adds it next to "AI info" and "Made with AI". Confirmed live: AI-labeled posts are hidden.
 - [ ] Story ads
 - [ ] Navigation bar profile link (used to detect the username for Saved-only mode)
 

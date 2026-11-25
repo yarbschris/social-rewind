@@ -9,6 +9,7 @@
 //   pnpm lab -- --mode dmsOnly    # or savedOnly (add --username you)
 //   pnpm lab -- --hide            # actually hide instead of outlining
 //   pnpm lab -- --experimental    # also apply unverified network rules
+//   pnpm lab -- --grayscale       # turn on Grayscale
 //
 // The snippet is written to engine/dist/lab-snippet.js and copied to the clipboard.
 import { build } from "esbuild";
@@ -45,7 +46,7 @@ export function labConfig(pack, opts = {}) {
   return {
     platform: pack.platform,
     hosts: ["instagram.com", "www.instagram.com"],
-    settings: { mode: opts.mode ?? "normal", features, grayscale: false, postCounter: true },
+    settings: { mode: opts.mode ?? "normal", features, grayscale: !!opts.grayscale, postCounter: true },
     rules: pack,
     ...(opts.username ? { username: opts.username } : {}),
     debug: !opts.hide,
@@ -336,6 +337,7 @@ function parseArgs(argv) {
     else if (a === "--all") opts.all = true;
     else if (a === "--hide") opts.hide = true;
     else if (a === "--experimental") opts.experimental = true;
+    else if (a === "--grayscale") opts.grayscale = true;
     else if (a === "--mode") opts.mode = argv[++i];
     else if (a === "--username") opts.username = argv[++i];
   }
@@ -357,5 +359,5 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     /* not macOS */
   }
   console.log(`Wrote ${out} (${(snippet.length / 1024).toFixed(1)} KB)${copied ? ", copied to clipboard" : ""}.`);
-  console.log(`Settings: mode=${opts.mode ?? "normal"}, features=${opts.defaults ? "defaults" : opts.all ? "all" : "all except hideFeed"}, ${opts.hide ? "hiding" : "outlining (debug)"}${opts.experimental ? ", experimental network rules" : ""}`);
+  console.log(`Settings: mode=${opts.mode ?? "normal"}, features=${opts.defaults ? "defaults" : opts.all ? "all" : "all except hideFeed"}, ${opts.hide ? "hiding" : "outlining (debug)"}${opts.experimental ? ", experimental network rules" : ""}${opts.grayscale ? ", grayscale" : ""}`);
 }

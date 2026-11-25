@@ -31,6 +31,11 @@ describe("Safari lab snippet", () => {
 });
 
 describe("Safari lab helpers", () => {
+  it("turns on grayscale with --grayscale", () => {
+    expect(labConfig(loadPack("instagram")).settings.grayscale).toBe(false);
+    expect(labConfig(loadPack("instagram"), { grayscale: true }).settings.grayscale).toBe(true);
+  });
+
   it("leaves Hide feed off unless --all", () => {
     expect(labConfig(loadPack("instagram")).settings.features.hideFeed).toBe(false);
     expect(labConfig(loadPack("instagram"), { all: true }).settings.features.hideFeed).toBe(true);

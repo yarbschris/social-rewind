@@ -105,7 +105,8 @@
           "a[href*=\"/comments/\"]",
           "textarea[aria-label*=\"comment\" i]",
           "form:has(> textarea[aria-label*=\"comment\" i])",
-          "svg[aria-label=\"Comment\" i]"
+          "svg[aria-label=\"Comment\" i]",
+          "span:has(svg[aria-label=\"Comment\" i]) + span[role=\"button\"]"
         ],
         "routes": [
           {

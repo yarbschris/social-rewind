@@ -364,6 +364,7 @@ describe("rev 17: notes row takes its wrappers with it", () => {
   });
 });
 
+<<<<<<< HEAD
 describe("rev 19: AI content label", () => {
   let dom: DomHandle;
   afterEach(() => dom.uninstall());
@@ -374,5 +375,20 @@ describe("rev 19: AI content label", () => {
     document.querySelector("main")!.innerHTML = post("ai", "<button><div><span>AI content</span></div></button>") + post("ok");
     await flush();
     expect([...document.querySelectorAll(`[${HIDDEN_ATTR}]`)].map((e) => `${e.getAttribute("data-id")}:${e.getAttribute(HIDDEN_ATTR)}`)).toEqual(["ai:hideAiLabeled.dom0"]);
+=======
+describe("rev 18: comment count", () => {
+  it("hides the count after the comment button, not the like or share counts", () => {
+    const rules = compile(config({ settings: settings({ features: { hideComments: true } }) }));
+    const sel = rules.css.find((c) => c.rule.includes("+ span"))!.rule;
+    // Live action bar: [like][count][comment][count][repost][count][share][count]
+    document.documentElement.innerHTML =
+      '<head></head><body><section><div>' +
+      '<span><div role="button"><div><span><svg aria-label="Like"></svg></span></div></div></span><span role="button" id="likes">40</span>' +
+      '<span><div role="button"><div><svg aria-label="Comment"></svg></div></div></span><span role="button" id="comments">12</span>' +
+      '<div role="button"><svg aria-label="Repost"></svg></div><span role="button" id="reposts">3</span>' +
+      '<div role="button"><svg aria-label="Share"></svg></div><span role="button" id="shares">5</span>' +
+      "</div></section></body>";
+    expect([...document.querySelectorAll(sel)].map((e) => e.id)).toEqual(["comments"]);
+>>>>>>> main
   });
 });

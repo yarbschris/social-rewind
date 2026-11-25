@@ -2,7 +2,7 @@
   "$schema": "./schema/rule-pack.schema.json",
   "schemaVersion": 1,
   "platform": "instagram",
-  "revision": 17,
+  "revision": 19,
   "minEngineVersion": 2,
   "startPath": "/",
   "alwaysAllowRoutes": [
@@ -330,6 +330,7 @@
             "type": "hideIfText",
             "container": "article",
             "text": [
+              "AI content",
               "AI info",
               "Made with AI"
             ],

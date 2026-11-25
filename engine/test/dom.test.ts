@@ -363,3 +363,16 @@ describe("rev 17: notes row takes its wrappers with it", () => {
     expect(document.getElementById("search")!.hasAttribute(HIDDEN_ATTR)).toBe(false);
   });
 });
+
+describe("rev 19: AI content label", () => {
+  let dom: DomHandle;
+  afterEach(() => dom.uninstall());
+  it("hides posts labelled AI content (inside a button in the post)", async () => {
+    document.documentElement.innerHTML = "<head></head><body><main></main></body>";
+    const rules = compile(config({ settings: settings({ features: { hideAiLabeled: true } }) }));
+    dom = installDom(() => rules, { debug: false, grayscale: false });
+    document.querySelector("main")!.innerHTML = post("ai", "<button><div><span>AI content</span></div></button>") + post("ok");
+    await flush();
+    expect([...document.querySelectorAll(`[${HIDDEN_ATTR}]`)].map((e) => `${e.getAttribute("data-id")}:${e.getAttribute(HIDDEN_ATTR)}`)).toEqual(["ai:hideAiLabeled.dom0"]);
+  });
+});

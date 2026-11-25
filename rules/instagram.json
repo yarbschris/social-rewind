@@ -2,7 +2,7 @@
   "$schema": "./schema/rule-pack.schema.json",
   "schemaVersion": 1,
   "platform": "instagram",
-  "revision": 8,
+  "revision": 9,
   "minEngineVersion": 2,
   "startPath": "/",
   "alwaysAllowRoutes": [
@@ -139,6 +139,24 @@
         ]
       }
     },
+    "hideNotes": {
+      "title": "Hide notes",
+      "description": "Hides the row of notes at the top of your DMs.",
+      "group": "content",
+      "default": false,
+      "rules": {
+        "dom": [
+          {
+            "type": "hideIfText",
+            "container": "ul",
+            "text": [
+              "Your note"
+            ],
+            "when": "html[data-sr-path^=\"/direct/\"]"
+          }
+        ]
+      }
+    },
     "hideFeed": {
       "title": "Hide feed",
       "description": "Your home feed shows no posts. DMs, profiles and saved posts still work.",
@@ -229,6 +247,24 @@
               ]
             },
             "verified": false
+          }
+        ]
+      }
+    },
+    "hideSuggestedAccounts": {
+      "title": "Hide suggested accounts",
+      "description": "Hides “Suggested for you” people to follow.",
+      "group": "ads",
+      "default": true,
+      "rules": {
+        "css": [
+          "main div:has(> div > a[href^=\"/explore/people/\"])"
+        ],
+        "routes": [
+          {
+            "pattern": "^/explore/people(?:/|$)",
+            "action": "redirect",
+            "to": "/"
           }
         ]
       }

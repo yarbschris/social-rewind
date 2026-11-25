@@ -208,3 +208,34 @@ describe("shared-reel viewer in DMs (hideAllButFirst with branch)", () => {
     expect(hiddenIds()).toEqual(["more2"]);
   });
 });
+
+describe("rev 9: suggested accounts and notes", () => {
+  let dom: DomHandle;
+  afterEach(() => dom?.uninstall());
+
+  it("hides the suggested-accounts block around its See all link, not the feed", () => {
+    const rules = compile(config());
+    const sel = rules.css.find((c) => c.id === "hideSuggestedAccounts.css0")!.rule;
+    document.documentElement.innerHTML =
+      '<head></head><body><main><div id="feed"><div id="item"><div id="block"><div><span>Suggested for you</span><a href="/explore/people/">See all</a></div><div>cards</div></div></div>' +
+      '<div><article><a href="/p/A/">post</a></article></div></div></main></body>';
+    // happy-dom treats a chained `:has(> a > b)` as a descendant match, so it also matches
+    // #feed and #item. WebKit follows the spec; the lab count on the live site checks exactness.
+    expect([...document.querySelectorAll(sel)].map((e) => e.id)).toContain("block");
+  });
+
+  it("hides the notes row in DMs only", async () => {
+    document.documentElement.innerHTML = "<head></head><body><main></main></body>";
+    const rules = compile(config({ settings: settings({ features: { hideNotes: true } }) }));
+    dom = installDom(() => rules, { debug: false, grayscale: false });
+    const html = '<ul id="notes"><li><div role="button"><span>Your note</span></div></li></ul><ul id="threads"><li>chat</li></ul>';
+    dom.setPath("/");
+    dom.pathChanged();
+    document.querySelector("main")!.innerHTML = html;
+    await flush();
+    expect(document.querySelectorAll(`[${HIDDEN_ATTR}]`).length).toBe(0);
+    dom.setPath("/direct/inbox/");
+    dom.pathChanged();
+    expect([...document.querySelectorAll(`[${HIDDEN_ATTR}]`)].map((e) => e.id)).toEqual(["notes"]);
+  });
+});

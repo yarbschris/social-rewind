@@ -39,6 +39,7 @@ describe("evaluateRoute (instagram)", () => {
     expect(evaluateRoute("/explore/", normal).action).toBe("allow");
     expect(evaluateRoute("/explore/search/", normal).action).toBe("allow");
     expect(evaluateRoute("/explore/tags/cats/", normal)).toMatchObject({ action: "block" });
+    expect(evaluateRoute("/explore/people/", normal)).toMatchObject({ action: "redirect", to: "/" });
   });
 
   it("uses capture groups in redirects", () => {

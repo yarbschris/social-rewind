@@ -45,8 +45,8 @@ For each one, note the selector/label you'd use, or "not present on mobile web":
 - [ ] Navigation bar profile link (used to detect the username for Saved-only mode)
 
 ## Requested next
-- ⬜ **Suggested accounts ("Suggested for you" people to follow)** on Home, outside any `article`, so `hideSuggested` misses it. Wanted as its own toggle.
-- ⬜ **Notes tray in DMs** (the status bubbles between message search and the thread list). Wanted as a toggle.
+- ⬜ **Suggested accounts** (rev 9, `hideSuggestedAccounts`, its own toggle): the block's "See all" link goes to `/explore/people/` (now redirected home). Rule: the grandparent of that link (header row plus card carousel). The 20 "Suggested for you" text nodes found were all in feed reels, already hidden. Check that `hideSuggestedAccounts.css0` is exactly 1 per block and the whole carousel goes.
+- ⬜ **Notes tray in DMs** (rev 9, `hideNotes`, off by default): a `ul` of `li > div[role="button"]` bubbles; the user's own is labelled "Your note". Rule: hide the `ul` containing that text on `/direct/` paths. English-only, and it won't fire if the user's own bubble is missing.
 
 ## Open questions from the engine review (verify, don't assume)
 Each of these came from a reviewer's memory of Instagram, so it's as unverified as the original rules.

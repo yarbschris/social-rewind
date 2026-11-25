@@ -177,6 +177,12 @@ describe("installRouter", () => {
     expect(events[0]).toMatchObject({ type: "routeBlocked", path: "/explore/tags/cats/" });
   });
 
+  it("Saved posts only opens saved reels too, not just posts", () => {
+    const savedMe = compile(config({ settings: settings({ mode: "savedOnly" }), username: "me" }));
+    for (const p of ["/me/saved/", "/me/saved/all-posts/", "/p/ABC/", "/reel/XYZ/"]) expect(evaluateRoute(p, savedMe).action).toBe("allow");
+    for (const p of ["/someone/", "/reels/", "/"]) expect(evaluateRoute(p, savedMe)).toMatchObject({ action: "redirect", to: "/me/saved/" });
+  });
+
   it("DMs only lets a shared post or reel open, but nothing around it", () => {
     for (const p of ["/p/ABC/", "/someone/p/ABC/", "/reel/XYZ/"]) expect(evaluateRoute(p, dms).action).toBe("allow");
     for (const p of ["/someone/", "/p/ABC/liked_by/", "/explore/", "/"]) expect(evaluateRoute(p, dms).action).toBe("redirect");

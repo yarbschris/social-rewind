@@ -189,7 +189,15 @@ describe("shared-reel viewer in DMs (hideAllButFirst with branch)", () => {
     expect(hiddenIds()).toEqual(["more"]);
   });
 
-  it("does nothing outside DMs", async () => {
+  it("also stops scrolling past a reel opened on its own page (e.g. from Saved)", async () => {
+    dom.setPath("/reel/X/");
+    dom.pathChanged();
+    document.querySelector("main")!.innerHTML = viewer;
+    await flush();
+    expect(hiddenIds()).toEqual(["more"]);
+  });
+
+  it("does nothing outside DMs and reel pages", async () => {
     dom.setPath("/");
     dom.pathChanged();
     document.querySelector("main")!.innerHTML = viewer;

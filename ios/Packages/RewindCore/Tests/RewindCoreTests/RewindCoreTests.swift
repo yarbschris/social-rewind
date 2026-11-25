@@ -345,7 +345,8 @@ private func pack(revision: Int = 1, minEngine: Int = 1, platform: String = "ins
         #expect(g.evaluate(path: "/me.here/saved/all-posts/") == .allow)
         #expect(g.evaluate(path: "/p/C0de/") == .allow)
         #expect(g.evaluate(path: "/") == .navigate("/me.here/saved/"))
-        #expect(g.evaluate(path: "/reel/x/") == .navigate("/me.here/saved/"))
+        #expect(g.evaluate(path: "/reel/x/") == .allow) // saved reels open too
+        #expect(g.evaluate(path: "/someone/") == .navigate("/me.here/saved/"))
 
         let unknown = guarded("savedOnly")
         #expect(unknown.modeHome == nil)

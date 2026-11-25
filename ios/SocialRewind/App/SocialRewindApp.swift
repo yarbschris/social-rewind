@@ -21,6 +21,18 @@ struct RootView: View {
     @Environment(AppModel.self) private var model
 
     var body: some View {
+        #if DEBUG
+        if let screen = DebugScreen.requested {
+            DebugScreenView(screen: screen)
+        } else {
+            main
+        }
+        #else
+        main
+        #endif
+    }
+
+    @ViewBuilder private var main: some View {
         if model.onboardingComplete {
             HomeView()
         } else {

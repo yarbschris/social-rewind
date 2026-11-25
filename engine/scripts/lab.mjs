@@ -108,7 +108,7 @@ function labRuntime(config, KNOWN_SEGMENTS) {
     "close comment comments conversation copy create delete details direct dismiss edit emoji explore follow followers following for " +
     "from gallery gif hide highlight highlights home icon image in inbox info is label like likes link live loading menu message " +
     "messages more mute new next notifications of on open options pause photo picture play post posts previous profile reel reels " +
-    "remove replies reply report requests save saved search see seen send settings share show sound sponsored sticker stories story " +
+    "remove replies reply repost reposted report requests save saved search see seen send settings share show sound sponsored sticker stories story " +
     "suggested tag tagged tags the to toggle unfollow unlike unmute unseen user verified video view voice with you your " +
     "left right up down scroll note notes go forward").split(" "));
   const maskLabel = (v) => v.replace(/[\p{L}\p{N}._'’-]+/gu, (w) => (UI_WORDS.has(w.toLowerCase()) ? w : "<w>"));

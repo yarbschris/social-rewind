@@ -102,12 +102,18 @@ final class AppModel {
     /// Both engine bundles, each wrapped with the config as a closure constant. nil → fail closed.
     func injectedScripts(for platform: Platform) -> InjectedScripts? {
         guard let pack = rulePacks[platform], let sources = RulePackLoader.engineSources() else { return nil }
+        #if DEBUG
+        let (debug, experimental) = (developer.debugOverlay, developer.experimentalNetworkFiltering)
+        #else
+        // The Developer section only exists in development builds; never carry its switches over.
+        let (debug, experimental) = (false, false)
+        #endif
         let config = EngineConfig(platform: platform,
                                   settings: settings(for: platform),
                                   rules: pack,
                                   username: usernames[platform],
-                                  debug: developer.debugOverlay,
-                                  experimental: developer.experimentalNetworkFiltering)
+                                  debug: debug,
+                                  experimental: experimental)
         do {
             return InjectedScripts(page: try EngineConfigBuilder.wrap(bundleSource: sources.page, config: config),
                                    isolated: try EngineConfigBuilder.wrap(bundleSource: sources.isolated, config: config))

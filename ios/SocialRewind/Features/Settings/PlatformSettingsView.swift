@@ -149,7 +149,7 @@ private struct ReminderControls: View {
         @Bindable var model = model
         Toggle("Scroll reminders", isOn: $model.reminders.enabled)
         if model.reminders.enabled {
-            Stepper("Every \(model.reminders.everyPosts) posts",
+            Stepper(model.reminders.everyPosts == 0 ? "No post reminder" : "Every \(model.reminders.everyPosts) posts",
                     value: $model.reminders.everyPosts, in: 0...500, step: 10)
             Stepper(model.reminders.everyMinutes == 0 ? "No time reminder" : "Every \(model.reminders.everyMinutes) minutes",
                     value: $model.reminders.everyMinutes, in: 0...120, step: 5)
@@ -178,9 +178,11 @@ private struct RulesSection: View {
             Text("When this is on, Social Rewind downloads updated filter rules from its public GitHub repository. Nothing about you is sent. Off by default.")
         }
 
+        #if DEBUG
         Section("Developer") {
             Toggle("Show filter debug overlay", isOn: $model.developer.debugOverlay)
             Toggle("Experimental network filtering", isOn: $model.developer.experimentalNetworkFiltering)
         }
+        #endif
     }
 }

@@ -15,9 +15,12 @@ struct HomeView: View {
                     }
                 }
 
-                Section("Coming later") {
-                    ForEach(Platform.allCases.filter { !$0.isAvailable }) { platform in
-                        Text(platform.displayName).foregroundStyle(.secondary)
+                Section {
+                    EmptyView()
+                } footer: {
+                    let later = Platform.allCases.filter { !$0.isAvailable }.map(\.displayName)
+                    if !later.isEmpty {
+                        Text("Coming later: \(later.formatted(.list(type: .and))).")
                     }
                 }
             }
@@ -75,11 +78,20 @@ struct LockedAppsView: View {
     var body: some View {
         List {
             ForEach(Platform.allCases.filter(\.isAvailable)) { platform in
-                Section(platform.displayName) {
+                let hasApp = !(model.selections[platform]?.applicationTokens.isEmpty ?? true)
+                Section {
                     AppPickerRow(platform: platform)
+                    // Locking does nothing until the app itself is picked, so don't show it as on.
                     Toggle("Lock the \(platform.displayName) app", isOn: Binding(
-                        get: { model.lockedPlatforms.contains(platform) },
+                        get: { hasApp && model.lockedPlatforms.contains(platform) },
                         set: { model.setLocked($0, for: platform) }))
+                        .disabled(!hasApp)
+                } header: {
+                    Text(platform.displayName)
+                } footer: {
+                    if !hasApp {
+                        Text("Select the \(platform.displayName) app first. Until then it isn't locked, and you can still open it as usual.")
+                    }
                 }
             }
         }

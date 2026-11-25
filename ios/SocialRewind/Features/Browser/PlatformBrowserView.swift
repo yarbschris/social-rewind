@@ -137,7 +137,7 @@ struct PlatformBrowserView: View {
     }
 }
 
-private struct FilterStatusCover: View {
+struct FilterStatusCover: View {
     let state: BrowserController.FilterState
     let retry: () -> Void
     let close: () -> Void
@@ -149,10 +149,11 @@ private struct FilterStatusCover: View {
             case .loading:
                 ProgressView("Applying your filters…")
             case .failed(let reason):
-                VStack(spacing: 16) {
-                    ContentUnavailableView("Filters didn't load",
-                                           systemImage: "exclamationmark.shield",
-                                           description: Text(reason))
+                ContentUnavailableView {
+                    Label("Filters didn't load", systemImage: "exclamationmark.shield")
+                } description: {
+                    Text(reason)
+                } actions: {
                     HStack {
                         Button("Close", action: close).buttonStyle(.bordered)
                         Button("Retry", action: retry).buttonStyle(.borderedProminent)
@@ -165,7 +166,7 @@ private struct FilterStatusCover: View {
     }
 }
 
-private struct ReminderSheet: View {
+struct ReminderSheet: View {
     @Environment(\.dismiss) private var dismissSheet
     let reminder: BrowserController.Reminder
     let platform: Platform

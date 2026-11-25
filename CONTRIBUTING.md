@@ -54,6 +54,6 @@ Captured HTML or JSON from your own account can contain names, messages and phot
 
 ## Commits
 
-Work on a feature branch, never directly on `main`, and open a pull request. Use one branch per feature or fix, named by area: `rules/…`, `engine/…`, `ios/…`, `docs/…`. That keeps each change easy to review, track and roll back.
+Work on a feature branch, never directly on `main`, and open a pull request. Use one branch per feature or fix, named by area: `rules/…`, `engine/…`, `ios/…`, `docs/…`. That keeps each change easy to review, track and roll back. `main` is protected: a PR can merge only when the **engine OK** and **iOS OK** checks pass. They run on every PR and skip the expensive jobs when the PR doesn't touch what they test, so docs-only PRs pass in seconds.
 
 Small, focused commits. Run `scripts/test-all.sh` (engine, rule validation and RewindCore) before opening a PR. Rule packs are read by both the engine and the Swift code, so a rules change must pass both.

@@ -12,9 +12,9 @@
 - ✅ **Identity:** rev 5 nav-scoped detection works.
 - ✅ **Nav icons and action buttons** are `svg[role="img"][aria-label="…"]` → `span` → `div` → `div[role="button"]` (Home, Explore, Reels, Messages, Like…).
 - ✅ The XHR "access control checks" errors are Instagram's own, logged during reload before our snippet runs.
-- ❌ **Comment buttons:** rev 6's nesting guess matched nothing; only the bare `svg[aria-label="Comment"]` matched (9 in the reel viewer), and an svg can't show a debug label. Rev 7 walks up from the icon to the nearest `[role="button"]` (`hideComments.dom0`). Needs re-checking: the labelled box should be icon-sized.
-- ⬜ **Shared reel viewer (from DMs):** opens as an overlay; the URL stays on the thread and nothing is pushed (no `routeBlocked`). No `article`s. Each reel is a `div[role="group"]` containing its `video` and two `/reels/audio/<id>/` links. The opened reel and a 9-slot list of more reels are siblings under one wrapper. Rev 8 (`blockReels.dom2`, engine 2 `branch`) hides that whole list on `/direct/` paths. Needs checking with `pnpm lab -- --hide`: the opened reel still plays, and swiping goes nowhere.
-- ❌ **Stories tray:** no `/stories/` links. Bubbles are `div[role="button"][aria-label^="Story by"]`, all direct children of one tray `div` under `main`. Rev 7 hides a div with a story button as its 2nd child (so a single story ring on a post avatar is skipped). English-only label; needs a locale-free signal before localization. Should match exactly 1 on Home.
+- ✅ **Comment buttons (rev 7, confirmed hidden; Like and Share stay):** rev 6's nesting guess matched nothing; only the bare `svg[aria-label="Comment"]` matched (9 in the reel viewer), and an svg can't show a debug label. Rev 7 walks up from the icon to the nearest `[role="button"]` (`hideComments.dom0`). Needs re-checking: the labelled box should be icon-sized.
+- ✅ **Shared reel viewer (from DMs):** opens as an overlay; the URL stays on the thread and nothing is pushed (no `routeBlocked`). No `article`s. Each reel is a `div[role="group"]` containing its `video` and two `/reels/audio/<id>/` links. The opened reel and a 9-slot list of more reels are siblings under one wrapper. Rev 8 (`blockReels.dom2`, engine 2 `branch`) hides that whole list on `/direct/` paths. Confirmed in hide mode: the opened reel plays and swiping goes nowhere.
+- ✅ **Stories tray (rev 7, 1 match on Home):** no `/stories/` links. Bubbles are `div[role="button"][aria-label^="Story by"]`, all direct children of one tray `div` under `main`. Rev 7 hides a div with a story button as its 2nd child (so a single story ring on a post avatar is skipped). English-only label; needs a locale-free signal before localization. Should match exactly 1 on Home.
 - ❌ **Identity:** not detected with `[role=navigation]`. Rev 5 searches inside the nav bar (the common ancestor of the Home and Inbox links). Needs re-checking.
 
 Run on a physical iPhone with a development build. Turn on **Settings → Developer → Filter debug overlay** so hidden elements are outlined instead of removed.
@@ -43,6 +43,10 @@ For each one, note the selector/label you'd use, or "not present on mobile web":
 - [ ] "AI info" label
 - [ ] Story ads
 - [ ] Navigation bar profile link (used to detect the username for Saved-only mode)
+
+## Requested next
+- ⬜ **Suggested accounts ("Suggested for you" people to follow)** on Home, outside any `article`, so `hideSuggested` misses it. Wanted as its own toggle.
+- ⬜ **Notes tray in DMs** (the status bubbles between message search and the thread list). Wanted as a toggle.
 
 ## Open questions from the engine review (verify, don't assume)
 Each of these came from a reviewer's memory of Instagram, so it's as unverified as the original rules.

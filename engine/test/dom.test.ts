@@ -242,3 +242,23 @@ describe("rev 9: suggested accounts and notes", () => {
     expect([...document.querySelectorAll(`[${HIDDEN_ATTR}]`)].map((e) => `${e.id}:${e.getAttribute(HIDDEN_ATTR)}`)).toEqual(["row:hideNotes.dom0", "notes:hideNotes.dom1"]);
   });
 });
+
+describe("rev 11: DMs only hides the inbox back button", () => {
+  let dom: DomHandle;
+  afterEach(() => dom.uninstall());
+  const back = '<div role="button" id="back"><svg aria-label="Back"></svg></div>';
+
+  it("on the inbox, but not in a thread (where back goes to the inbox)", async () => {
+    document.documentElement.innerHTML = "<head></head><body><main></main></body>";
+    const rules = compile(config({ settings: settings({ mode: "dmsOnly" }) }));
+    dom = installDom(() => rules, { debug: false, grayscale: false });
+    dom.setPath("/direct/t/1/");
+    dom.pathChanged();
+    document.querySelector("main")!.innerHTML = back;
+    await flush();
+    expect(document.querySelectorAll(`[${HIDDEN_ATTR}]`).length).toBe(0);
+    dom.setPath("/direct/inbox/");
+    dom.pathChanged();
+    expect(document.getElementById("back")!.getAttribute(HIDDEN_ATTR)).toBe("mode:dmsOnly.dom0");
+  });
+});

@@ -2,7 +2,7 @@
   "$schema": "./schema/rule-pack.schema.json",
   "schemaVersion": 1,
   "platform": "instagram",
-  "revision": 10,
+  "revision": 11,
   "minEngineVersion": 2,
   "startPath": "/",
   "alwaysAllowRoutes": [
@@ -334,6 +334,14 @@
           "a[href=\"/explore/\"]",
           "a[href=\"/reels/\"]",
           "a[href=\"/create/select/\"]"
+        ],
+        "dom": [
+          {
+            "type": "hideClosest",
+            "match": "svg[aria-label=\"Back\" i]",
+            "closest": "a, [role=\"button\"], button",
+            "when": "html[data-sr-path^=\"/direct/inbox\"]"
+          }
         ]
       }
     },

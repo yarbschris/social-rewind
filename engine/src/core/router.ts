@@ -141,6 +141,9 @@ export interface RouterHooks {
  * - In-app navigation (pushState/replaceState, link taps) to a filtered page is
  *   **inert**: nothing happens. Redirecting here would force a full page reload,
  *   since we can't drive the site's router, which loses the user's place.
+ * - Except pushState/replaceState out of a **mode**: the site may render the new
+ *   page even though the URL change was swallowed (Instagram's inbox back button
+ *   does), and a mode is a lock, so reload to the mode's home instead.
  * - Page loads and back/forward (check) redirect to an allowed page, since there
  *   is no previous page to stay on. These go through the loop breaker.
  */
@@ -185,6 +188,7 @@ export function installRouter(getRules: () => ActiveRules, hooks: RouterHooks): 
       }
       // block/redirect: swallow (inert). Native URL observation is the backstop
       // if the site renders the filtered view anyway.
+      else if (d.action === "redirect" && d.byMode) navigate(d.to);
     };
 
   history.pushState = wrap(origPush);

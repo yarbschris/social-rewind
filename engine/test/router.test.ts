@@ -177,6 +177,28 @@ describe("installRouter", () => {
     expect(events[0]).toMatchObject({ type: "routeBlocked", path: "/explore/tags/cats/" });
   });
 
+  it("pushState out of a mode reloads to the mode home (the site may render it anyway)", () => {
+    history.replaceState(null, "", "/direct/inbox/");
+    install(dms);
+    history.pushState(null, "", "/");
+    expect(location.pathname).toBe("/direct/inbox/");
+    expect(navs).toEqual(["https://www.instagram.com/direct/inbox/"]);
+    expect(events[0]).toMatchObject({ type: "routeBlocked", path: "/", reason: "mode:dmsOnly", redirectedTo: "/direct/inbox/" });
+  });
+
+  it("taps on links out of a mode stay inert (nothing renders, no reload)", () => {
+    history.replaceState(null, "", "/direct/inbox/");
+    install(dms);
+    const a = document.createElement("a");
+    a.href = "/alice/";
+    document.body.appendChild(a);
+    const ev = new MouseEvent("click", { bubbles: true, cancelable: true, button: 0 });
+    a.dispatchEvent(ev);
+    expect(ev.defaultPrevented).toBe(true);
+    expect(navs).toEqual([]);
+    a.remove();
+  });
+
   it("allowed pushState goes through", () => {
     install();
     history.pushState(null, "", "/direct/inbox/");

@@ -132,6 +132,10 @@ export interface RouterHooks {
   report(event: BridgeEvent): void;
   /** Navigation primitive (injectable for tests). */
   replace?(href: string): void;
+  /** history.back (injectable for tests). */
+  back?(): void;
+  /** How long to wait for history.back() to land before reloading instead (ms). */
+  backTimeoutMs?: number;
 }
 
 /**
@@ -145,6 +149,7 @@ export interface RouterHooks {
  *   to the mode's home. The site may render the new page even when its URL change
  *   is swallowed (Instagram's inbox back button does), a mode is a lock, and its
  *   home is where "back" should land (a DM thread's back button links to a profile).
+ *   When the user came from the mode's home, this is history.back() (no reload).
  * - Page loads and back/forward (check) redirect to an allowed page, since there
  *   is no previous page to stay on. These go through the loop breaker.
  */
@@ -152,6 +157,10 @@ export function installRouter(getRules: () => ActiveRules, hooks: RouterHooks): 
   const origPush = history.pushState.bind(history);
   const origReplace = history.replaceState.bind(history);
   const replace = hooks.replace ?? ((href: string) => location.replace(href));
+  const back = hooks.back ?? (() => history.back());
+  // The page the user was on before the current one, when we know it: set by our own
+  // allowed pushState, unknown (null) after back/forward or a page load.
+  let prevPath: string | null = null;
 
   const report = (path: string, d: RouteDecision) => {
     if (d.action === "allow") return;
@@ -176,24 +185,41 @@ export function installRouter(getRules: () => ActiveRules, hooks: RouterHooks): 
     replace(href);
   };
 
+  /**
+   * Leave to the mode's home. If that's the page the user came from (DMs only: thread →
+   * inbox), step back in history so the site's own router shows it without a reload.
+   * Fall back to a reload if the back doesn't land.
+   */
+  const leaveTo = (to: string) => {
+    if (prevPath === null || normalize(prevPath) !== normalize(to)) return navigate(to);
+    const from = location.pathname;
+    prevPath = null;
+    back();
+    setTimeout(() => {
+      if (location.pathname === from) navigate(to);
+    }, hooks.backTimeoutMs ?? 1000);
+  };
+
   const wrap =
-    (orig: typeof history.pushState) =>
+    (orig: typeof history.pushState, isPush: boolean) =>
     (data: unknown, unused: string, url?: string | URL | null): void => {
       const path = toPathname(url);
       if (path === null) return orig(data, unused, url);
       const d = evaluateRoute(path, getRules());
       report(path, d);
       if (d.action === "allow") {
+        const before = location.pathname;
         orig(data, unused, url);
+        if (isPush && normalize(before) !== normalize(path)) prevPath = before;
         hooks.onPathChange(path);
       }
       // block/redirect: swallow (inert). Native URL observation is the backstop
       // if the site renders the filtered view anyway.
-      else if (d.action === "redirect" && d.byMode) navigate(d.to);
+      else if (d.action === "redirect" && d.byMode) leaveTo(d.to);
     };
 
-  history.pushState = wrap(origPush);
-  history.replaceState = wrap(origReplace);
+  history.pushState = wrap(origPush, true);
+  history.replaceState = wrap(origReplace, false);
 
   const check = () => {
     const path = location.pathname;
@@ -204,7 +230,10 @@ export function installRouter(getRules: () => ActiveRules, hooks: RouterHooks): 
     else hooks.onPathChange(path);
   };
 
-  const onPop = () => check();
+  const onPop = () => {
+    prevPath = null;
+    check();
+  };
 
   const onClick = (e: MouseEvent) => {
     if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
@@ -221,7 +250,7 @@ export function installRouter(getRules: () => ActiveRules, hooks: RouterHooks): 
     // ...unless it's a way out of a mode: go to the mode's home instead. In DMs only,
     // a thread's back button links to the other person's profile, and the inbox is
     // where "back" should land.
-    if (d.action === "redirect" && d.byMode) navigate(d.to);
+    if (d.action === "redirect" && d.byMode) leaveTo(d.to);
   };
 
   addEventListener("popstate", onPop);

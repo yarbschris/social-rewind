@@ -44,7 +44,7 @@
             "type": "hideAllButFirst",
             "selector": "[role=\"group\"]:has(a[href^=\"/reels/audio/\"])",
             "branch": true,
-            "when": "html[data-sr-path^=\"/direct/\"]"
+            "when": "html[data-sr-path^=\"/direct/\"], html[data-sr-path*=\"/reel/\"]"
           }
         ],
         "routes": [
@@ -371,7 +371,7 @@
       "home": "/{username}/saved/",
       "allowRoutes": [
         "^/[^/]+/saved(?:/.*)?$",
-        "^/(?:[^/]+/)?p/[^/]+/?$"
+        "^/(?:[^/]+/)?(?:p|reel)/[^/]+/?$"
       ],
       "rules": {
         "css": [

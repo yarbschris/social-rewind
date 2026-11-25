@@ -100,12 +100,13 @@ function labRuntime(config) {
   };
   // ARIA labels often contain handles and display names ("Story by <someone>"). Default-deny:
   // keep common UI words, mask every other word.
-  const UI_WORDS = new Set(("a about account accounts ad add ads ai all and audio avatar back by call camera carousel chat clip " +
+  const UI_WORDS = new Set(("a about account accounts ad add ads ai all and arrow audio avatar back by call camera carousel chat chevron clip " +
     "close comment comments conversation copy create delete details direct dismiss edit emoji explore follow followers following for " +
     "from gallery gif hide highlight highlights home icon image in inbox info is label like likes link live loading menu message " +
     "messages more mute new next notifications of on open options pause photo picture play post posts previous profile reel reels " +
     "remove replies reply report requests save saved search see seen send settings share show sound sponsored sticker stories story " +
-    "suggested tag tagged tags the to toggle unfollow unlike unmute unseen user verified video view voice with you your").split(" "));
+    "suggested tag tagged tags the to toggle unfollow unlike unmute unseen user verified video view voice with you your " +
+    "left right up down scroll note notes go forward").split(" "));
   const maskLabel = (v) => v.replace(/[\p{L}\p{N}._'’-]+/gu, (w) => (UI_WORDS.has(w.toLowerCase()) ? w : "<w>"));
   const describe = (el) => {
     let s = el.tagName.toLowerCase();
@@ -157,6 +158,35 @@ function labRuntime(config) {
       });
       console.log(`[Social Rewind lab] path: ${hrefPattern(location.pathname)}`);
       return els.length;
+    },
+    /**
+     * The subtree around the first element matching `selector`: go `up` levels, then print
+     * everything below (structure only), e.g. tree('[data-sr-hidden="hideNotes.dom0"]').
+     * The matched element is marked with ◀.
+     */
+    tree(selector, up = 4, depth = 7, max = 200) {
+      let el = null;
+      try {
+        el = document.querySelector(selector);
+      } catch {
+        console.log(`[Social Rewind lab] invalid selector ${selector}`);
+        return 0;
+      }
+      if (!el) {
+        console.log(`[Social Rewind lab] nothing matches ${selector}`);
+        return 0;
+      }
+      let top = el;
+      for (let i = 0; i < up && top.parentElement && top.parentElement !== document.body; i++) top = top.parentElement;
+      const lines = [];
+      const walk = (n, d) => {
+        if (lines.length >= max) return;
+        lines.push("  ".repeat(d) + describe(n) + (n === el ? "  ◀" : ""));
+        if (d < depth) for (const c of n.children) walk(c, d + 1);
+      };
+      walk(top, 0);
+      console.log(lines.join("\n") + (lines.length >= max ? `\n… (stopped at ${max} lines)` : ""));
+      return lines.length;
     },
     /** Same, starting from an element (e.g. $0, the one selected in the Elements tab). */
     inspectElement(el, depth = 14) {

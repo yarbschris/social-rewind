@@ -53,4 +53,22 @@ describe("Safari lab helpers", () => {
     expect(out).not.toContain("alice");
     log.mockRestore();
   });
+
+  it("tree() prints the subtree around a match, masked", async () => {
+    document.documentElement.innerHTML =
+      '<head></head><body><main><div id="w"><div role="presentation"><ul data-x><li><div role="button" aria-label="Note by alice"></div></li></ul></div>' +
+      '<div role="button" aria-label="Scroll right"><svg aria-label="Chevron"></svg></div></div></main></body>';
+    (window as unknown as { __socialRewindLab?: boolean }).__socialRewindLab = false;
+    new Function(await makeSnippet(loadPack("instagram")))();
+    const lines: string[] = [];
+    const log = vi.spyOn(console, "log").mockImplementation((...a: unknown[]) => void lines.push(a.join(" ")));
+    const lab = (window as unknown as { SocialRewindLab: { tree(s: string, up?: number): number } }).SocialRewindLab;
+    expect(lab.tree("ul[data-x]", 2)).toBeGreaterThan(4);
+    const out = lines.join("\n");
+    expect(out).toMatch(/ul \(1 children\)\s+◀/);
+    expect(out).toContain('div[role="button"][aria-label="Scroll right"]');
+    expect(out).toContain('aria-label="Note by <w>"');
+    expect(out).not.toContain("alice");
+    log.mockRestore();
+  });
 });

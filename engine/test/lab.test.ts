@@ -72,3 +72,22 @@ describe("Safari lab helpers", () => {
     log.mockRestore();
   });
 });
+
+describe("Safari lab event log", () => {
+  it("masks handles in logged paths", async () => {
+    delete (window as unknown as { webkit?: unknown }).webkit;
+    (window as unknown as { __socialRewindLab?: boolean }).__socialRewindLab = false;
+    new Function(await makeSnippet(loadPack("instagram")))();
+    const lines: string[] = [];
+    const log = vi.spyOn(console, "log").mockImplementation((...a: unknown[]) => void lines.push(JSON.stringify(a)));
+    const wk = (window as unknown as { webkit: { messageHandlers: { socialRewind: { postMessage(e: unknown): void } } } }).webkit;
+    wk.messageHandlers.socialRewind.postMessage({ type: "routeBlocked", path: "/alice.b/", reason: "mode:dmsOnly", redirectedTo: "/direct/inbox/" });
+    wk.messageHandlers.socialRewind.postMessage({ type: "routeBlocked", path: "/alice.b/p/XYZ/", reason: "r" });
+    const out = lines.join("\n");
+    expect(out).toContain('"path":"/<user>/"');
+    expect(out).toContain('"redirectedTo":"/direct/inbox/"');
+    expect(out).toContain('"path":"/<user>/p/<id>/"');
+    expect(out).not.toContain("alice");
+    log.mockRestore();
+  });
+});

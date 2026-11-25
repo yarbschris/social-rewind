@@ -332,6 +332,10 @@ private func pack(revision: Int = 1, minEngine: Int = 1, platform: String = "ins
         #expect(g.evaluate(path: "/direct/t/123/") == .allow)
         #expect(g.evaluate(path: "/") == .navigate("/direct/inbox/"))
         #expect(g.evaluate(path: "/explore/") == .navigate("/direct/inbox/"))
+        // Posts and reels people send you open; their author's profile doesn't.
+        #expect(g.evaluate(path: "/p/ABC/") == .allow)
+        #expect(g.evaluate(path: "/reel/XYZ/") == .allow)
+        #expect(g.evaluate(path: "/someone/") == .navigate("/direct/inbox/"))
     }
 
     @Test func savedOnlyWithAndWithoutUsername() {

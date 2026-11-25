@@ -2,7 +2,7 @@
   "$schema": "./schema/rule-pack.schema.json",
   "schemaVersion": 1,
   "platform": "instagram",
-  "revision": 11,
+  "revision": 12,
   "minEngineVersion": 2,
   "startPath": "/",
   "alwaysAllowRoutes": [
@@ -323,10 +323,11 @@
   "modes": {
     "dmsOnly": {
       "title": "DMs only",
-      "description": "Only your messages. Everything else is blocked.",
+      "description": "Only your messages, and posts or reels people send you. Everything else is blocked.",
       "home": "/direct/inbox/",
       "allowRoutes": [
-        "^/direct/"
+        "^/direct/",
+        "^/(?:[^/]+/)?(?:p|reel)/[^/]+/?$"
       ],
       "rules": {
         "css": [

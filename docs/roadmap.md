@@ -39,3 +39,5 @@ No Screen Time equivalent. Options are an AccessibilityService (strict Google Pl
 
 ## Later features
 Sleep mode, time limits (DeviceActivity), weekly on-device stats.
+
+Idea (low demand, maybe): a **text-only mode** that hides images and video.

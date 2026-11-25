@@ -177,6 +177,11 @@ describe("installRouter", () => {
     expect(events[0]).toMatchObject({ type: "routeBlocked", path: "/explore/tags/cats/" });
   });
 
+  it("DMs only lets a shared post or reel open, but nothing around it", () => {
+    for (const p of ["/p/ABC/", "/someone/p/ABC/", "/reel/XYZ/"]) expect(evaluateRoute(p, dms).action).toBe("allow");
+    for (const p of ["/someone/", "/p/ABC/liked_by/", "/explore/", "/"]) expect(evaluateRoute(p, dms).action).toBe("redirect");
+  });
+
   it("pushState out of a mode reloads to the mode home (the site may render it anyway)", () => {
     history.replaceState(null, "", "/direct/inbox/");
     install(dms);

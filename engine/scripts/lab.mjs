@@ -29,6 +29,9 @@ async function bundle(entry) {
   return r.outputFiles[0].text;
 }
 
+// Path segments the lab prints as-is; any other segment is masked (<user> first, <id> after).
+const KNOWN_SEGMENTS = ["p", "reel", "reels", "explore", "stories", "direct", "inbox", "t", "accounts", "saved", "people", "tags", "create", "search", "comments", "highlights", "audio", "select"];
+
 // Features that would outline everything and drown out the rules being tested.
 const LAB_OFF_BY_DEFAULT = ["hideFeed"];
 
@@ -51,7 +54,7 @@ export function labConfig(pack, opts = {}) {
 }
 
 /** Runs in the page. Kept dependency-free; receives the config as an argument. */
-function labRuntime(config) {
+function labRuntime(config, KNOWN_SEGMENTS) {
   const pack = config.rules;
   const count = (sel) => {
     try {
@@ -85,7 +88,7 @@ function labRuntime(config) {
 
   // Structure only: tags, roles, ARIA labels (truncated), href *patterns*. No text content,
   // so the output is safe to share. Usernames in hrefs are replaced with <user>.
-  const KNOWN = new Set(["p", "reel", "reels", "explore", "stories", "direct", "inbox", "t", "accounts", "saved", "people", "tags", "create", "search", "comments", "highlights", "audio"]);
+  const KNOWN = new Set(KNOWN_SEGMENTS);
   const hrefPattern = (href) => {
     if (!href) return null;
     try {
@@ -265,14 +268,25 @@ export async function makeSnippet(pack, opts = {}) {
   try {
     if (!window.webkit?.messageHandlers?.socialRewind) {
       // identity events carry the username: redact before logging (output gets pasted into chats).
-      const redact = (e) => (e && e.type === "identity" ? { ...e, username: "<redacted, " + String(e.username).length + " chars>" } : e);
+      // Paths name people too (/<handle>/): keep known segments, mask the rest.
+      const KNOWN = new Set(${JSON.stringify(KNOWN_SEGMENTS)});
+      const mask = (p) => typeof p !== "string" ? p : "/" + p.split("?")[0].split("/").filter(Boolean).map((s, i) => (KNOWN.has(s) ? s : i === 0 ? "<user>" : "<id>")).join("/") + (p.split("?")[0].split("/").filter(Boolean).length ? "/" : "");
+      const redact = (e) => {
+        if (!e || typeof e !== "object") return e;
+        const out = { ...e };
+        if (out.type === "identity") out.username = "<redacted, " + String(out.username).length + " chars>";
+        if ("path" in out) out.path = mask(out.path);
+        if ("redirectedTo" in out) out.redirectedTo = mask(out.redirectedTo);
+        if (typeof out.message === "string") out.message = out.message.split(" ").map((w) => (w.startsWith("/") ? mask(w) : w)).join(" ");
+        return out;
+      };
       window.webkit = Object.assign(window.webkit || {}, { messageHandlers: { socialRewind: { postMessage: (e) => console.log("[SR]", e.type, redact(e)) } } });
     }
   } catch (e) { console.warn("[Social Rewind lab] couldn't attach event logger", e); }
 })();
 ${wrap(page)}
 ${wrap(isolated)}
-window.SocialRewindLab = (${labRuntime.toString()})(${cfg});
+window.SocialRewindLab = (${labRuntime.toString()})(${cfg}, ${JSON.stringify(KNOWN_SEGMENTS)});
 console.log("[Social Rewind lab] loaded. Outlined elements are labeled with the rule that matched. Then run: SocialRewindLab.report()  or  SocialRewindLab.inspect('Suggested for you')");
 `;
 }

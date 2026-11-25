@@ -4,6 +4,7 @@ import { send } from "./bridge";
 
 export const HIDDEN_ATTR = "data-sr-hidden";
 export const PATH_ATTR = "data-sr-path";
+export const COLLAPSE_ATTR = "data-sr-collapse";
 const STYLE_ID = "social-rewind-style";
 
 export interface DomOptions {
@@ -50,6 +51,14 @@ export function buildCss(rules: ActiveRules, opts: DomOptions, onError: (m: stri
     if (opts.debug && isValidSelector(`${rule}::before`)) lines.push(`${rule}::before { content: "SR ${id}" !important; ${label} }`);
   }
   lines.push(`[${HIDDEN_ATTR}] { ${hide} }`);
+  // Collapsed: still in the layout (so "load more" observers fire as it passes), but 0px and inert.
+  if (!opts.debug) {
+    lines.push(
+      `[${HIDDEN_ATTR}][${COLLAPSE_ATTR}] { display: block !important; height: 0 !important; min-height: 0 !important;` +
+        " overflow: hidden !important; margin: 0 !important; padding: 0 !important; border: 0 !important;" +
+        " opacity: 0 !important; pointer-events: none !important; }",
+    );
+  }
   if (opts.debug) lines.push(`[${HIDDEN_ATTR}]::before { content: "SR " attr(${HIDDEN_ATTR}) !important; ${label} }`);
   if (opts.grayscale) lines.push("html { filter: grayscale(1) !important; }");
   return lines.join("\n");
@@ -62,8 +71,8 @@ function textNodeMatches(t: string, rule: HideIfTextRule): boolean {
   return rule.text.some((want) => (mode === "exact" ? t === want : t.startsWith(want)));
 }
 
-/** One text walk per scope; returns the id of the first rule that matches. */
-function matchText(container: Element, group: TextRule[]): string | null {
+/** One text walk per scope; returns the first rule that matches. */
+function matchText(container: Element, group: TextRule[]): TextRule | null {
   const scopes = new Map<string, TextRule[]>(); // "" = whole container
   for (const r of group) {
     const key = r.rule.within ?? "";
@@ -83,7 +92,7 @@ function matchText(container: Element, group: TextRule[]): string | null {
       for (let n = walker.nextNode(); n; n = walker.nextNode()) {
         const t = n.nodeValue?.trim();
         if (!t) continue;
-        for (const r of rules) if (textNodeMatches(t, r.rule)) return r.id;
+        for (const r of rules) if (textNodeMatches(t, r.rule)) return r;
       }
     }
   }
@@ -117,16 +126,31 @@ export function installDom(getRules: () => ActiveRules, initial: DomOptions, onE
     if (!style.isConnected) (document.head ?? document.documentElement).appendChild(style);
   };
 
-  const hide = (el: Element, id: string) => {
+  const hide = (el: Element, id: string, rule: DomRule) => {
     if (el.hasAttribute(HIDDEN_ATTR)) return;
     el.setAttribute(HIDDEN_ATTR, id);
+    if (rule.collapse) el.setAttribute(COLLAPSE_ATTR, "");
+    // A collapsed post is still "on screen" as far as the site knows: don't let its video play.
+    for (const v of el.querySelectorAll("video")) v.pause();
     if (opts.debug) send({ type: "ruleHit", ruleId: id });
   };
+
+  const unhide = (el: Element) => {
+    el.removeAttribute(HIDDEN_ATTR);
+    el.removeAttribute(COLLAPSE_ATTR);
+  };
+
+  // `play` doesn't bubble, so catch it on the way down.
+  const onPlay = (e: Event) => {
+    const t = e.target;
+    if (t instanceof HTMLMediaElement && t.closest(`[${HIDDEN_ATTR}]`)) t.pause();
+  };
+  document.addEventListener("play", onPlay, true);
 
   const applyClosest = (root: ParentNode, id: string, rule: HideClosestRule) => {
     for (const m of within(root, rule.match)) {
       const target = m.closest(rule.closest);
-      if (target) hide(target, id);
+      if (target) hide(target, id, rule);
     }
   };
 
@@ -164,8 +188,8 @@ export function installDom(getRules: () => ActiveRules, initial: DomOptions, onE
         // Document-wide by nature: "first" only means something globally.
         const [first, ...rest] = within(document, rule.selector);
         for (const m of rest) {
-          if (!rule.branch) hide(m, id);
-          else if (first && !m.contains(first) && !first.contains(m)) hide(branchOf(m, first), id);
+          if (!rule.branch) hide(m, id, rule);
+          else if (first && !m.contains(first) && !first.contains(m)) hide(branchOf(m, first), id, rule);
         }
       } else groups.set(rule.container, [...(groups.get(rule.container) ?? []), { id, rule }]);
     }
@@ -173,7 +197,7 @@ export function installDom(getRules: () => ActiveRules, initial: DomOptions, onE
       for (const c of containersFor(root, selector)) {
         if (c.hasAttribute(HIDDEN_ATTR)) continue;
         const hit = matchText(c, group);
-        if (hit) hide(c, hit);
+        if (hit) hide(c, hit.id, hit.rule);
       }
     }
   };
@@ -198,7 +222,7 @@ export function installDom(getRules: () => ActiveRules, initial: DomOptions, onE
   const unhideStale = () => {
     const live = liveIds();
     for (const el of document.querySelectorAll(`[${HIDDEN_ATTR}]`)) {
-      if (!live.has(el.getAttribute(HIDDEN_ATTR) ?? "")) el.removeAttribute(HIDDEN_ATTR);
+      if (!live.has(el.getAttribute(HIDDEN_ATTR) ?? "")) unhide(el);
     }
   };
 
@@ -232,6 +256,7 @@ export function installDom(getRules: () => ActiveRules, initial: DomOptions, onE
     apply,
     uninstall() {
       observer.disconnect();
+      document.removeEventListener("play", onPlay, true);
       style.remove();
     },
   };

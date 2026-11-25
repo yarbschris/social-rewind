@@ -1,5 +1,5 @@
 import { compile, type ActiveRules } from "../src/core/compile";
-import { buildCss, HIDDEN_ATTR, installDom, type DomHandle } from "../src/core/dom";
+import { buildCss, COLLAPSE_ATTR, HIDDEN_ATTR, installDom, type DomHandle } from "../src/core/dom";
 import { config, settings } from "./helpers";
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
@@ -260,5 +260,53 @@ describe("rev 11: DMs only hides the inbox back button", () => {
     dom.setPath("/direct/inbox/");
     dom.pathChanged();
     expect(document.getElementById("back")!.getAttribute(HIDDEN_ATTR)).toBe("mode:dmsOnly.dom0");
+  });
+});
+
+describe("rev 13: feed posts collapse instead of display:none", () => {
+  let dom: DomHandle;
+  afterEach(() => dom.uninstall());
+  beforeEach(() => {
+    document.documentElement.innerHTML = "<head></head><body><main></main></body>";
+  });
+
+  it("collapses hidden feed posts (so the feed keeps loading) and pauses their video", async () => {
+    let rules = compile(config());
+    dom = installDom(() => rules, { debug: false, grayscale: false });
+    dom.setPath("/");
+    document.querySelector("main")!.innerHTML = post("1", "<span>Sponsored</span><video></video>") + post("2");
+    const video = document.querySelector("video")!;
+    const paused = vi.spyOn(video, "pause");
+    await flush();
+    const ad = document.querySelector('[data-id="1"]')!;
+    expect(ad.getAttribute(HIDDEN_ATTR)).toBe("blockAds.dom0");
+    expect(ad.hasAttribute(COLLAPSE_ATTR)).toBe(true);
+    expect(paused).toHaveBeenCalled();
+    // It tries to autoplay later: paused again.
+    paused.mockClear();
+    video.dispatchEvent(new Event("play"));
+    expect(paused).toHaveBeenCalled();
+    // Turning the feature off clears both attributes.
+    rules = compile(config({ settings: settings({ features: { blockAds: false } }) }));
+    dom.refresh({ debug: false, grayscale: false });
+    expect(ad.hasAttribute(HIDDEN_ATTR) || ad.hasAttribute(COLLAPSE_ATTR)).toBe(false);
+  });
+
+  it("still removes the extra reels after a shared one (loading should stop there)", async () => {
+    const rules = compile(config());
+    dom = installDom(() => rules, { debug: false, grayscale: false });
+    dom.setPath("/direct/t/1/");
+    dom.pathChanged();
+    const player = '<div role="group"><video></video><a href="/reels/audio/1/">a</a></div>';
+    document.querySelector("main")!.innerHTML = `<div><div>${player}</div><div id="more"><div>${player}</div></div></div>`;
+    await flush();
+    const more = document.getElementById("more")!;
+    expect(more.getAttribute(HIDDEN_ATTR)).toBe("blockReels.dom2");
+    expect(more.hasAttribute(COLLAPSE_ATTR)).toBe(false);
+  });
+
+  it("emits the collapse style only when hiding for real", () => {
+    expect(buildCss(compile(config()), { debug: false, grayscale: false })).toContain(`[${HIDDEN_ATTR}][${COLLAPSE_ATTR}] { display: block !important; height: 0 !important;`);
+    expect(buildCss(compile(config()), { debug: true, grayscale: false })).not.toContain(COLLAPSE_ATTR);
   });
 });

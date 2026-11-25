@@ -195,6 +195,9 @@
             },
             "when": {
               "$ref": "#/$defs/selector"
+            },
+            "collapse": {
+              "type": "boolean"
             }
           }
         },
@@ -232,6 +235,9 @@
             },
             "when": {
               "$ref": "#/$defs/selector"
+            },
+            "collapse": {
+              "type": "boolean"
             }
           }
         },
@@ -253,6 +259,9 @@
               "$ref": "#/$defs/selector"
             },
             "branch": {
+              "type": "boolean"
+            },
+            "collapse": {
               "type": "boolean"
             }
           }

@@ -86,6 +86,13 @@ export type DomRule = HideClosestRule | HideIfTextRule | HideAllButFirstRule;
  */
 interface Conditional {
   when?: string;
+  /**
+   * Hide by collapsing to zero height instead of `display: none`. Use it for feed
+   * items: the site loads more when its last items scroll into view, and
+   * display:none items never do, so the feed stalls (blank screen). Don't use it
+   * where you want loading to stop, such as the reels after a shared one.
+   */
+  collapse?: boolean;
 }
 
 /** Find `match`, hide its nearest ancestor matching `closest`. */

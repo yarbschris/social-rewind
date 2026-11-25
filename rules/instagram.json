@@ -2,7 +2,7 @@
   "$schema": "./schema/rule-pack.schema.json",
   "schemaVersion": 1,
   "platform": "instagram",
-  "revision": 12,
+  "revision": 13,
   "minEngineVersion": 2,
   "startPath": "/",
   "alwaysAllowRoutes": [
@@ -32,7 +32,8 @@
             "type": "hideClosest",
             "match": "article a[href*=\"/reel/\"]",
             "closest": "article",
-            "when": "html:not([data-sr-path*=\"/reel/\"])"
+            "when": "html:not([data-sr-path*=\"/reel/\"])",
+            "collapse": true
           },
           {
             "type": "hideAllButFirst",
@@ -188,7 +189,8 @@
             "text": [
               "Sponsored",
               "Ad"
-            ]
+            ],
+            "collapse": true
           }
         ],
         "network": [
@@ -236,7 +238,8 @@
             "text": [
               "Suggested for you",
               "Suggested posts"
-            ]
+            ],
+            "collapse": true
           }
         ],
         "network": [
@@ -289,7 +292,8 @@
             "text": [
               "reposted",
               "Reposted"
-            ]
+            ],
+            "collapse": true
           }
         ]
       }
@@ -306,7 +310,8 @@
             "text": [
               "AI info",
               "Made with AI"
-            ]
+            ],
+            "collapse": true
           }
         ]
       }

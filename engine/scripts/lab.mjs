@@ -76,7 +76,7 @@ function labRuntime(config) {
           r.type === "hideIfText"
             ? `${r.container} ∋ ${JSON.stringify(r.text)}`
             : r.type === "hideAllButFirst"
-              ? `all but first ${r.selector}`
+              ? `all but first ${r.selector}${r.branch ? " (whole branch)" : ""}`
               : `${r.match} → ${r.closest}`,
       });
     });

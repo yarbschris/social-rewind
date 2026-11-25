@@ -101,6 +101,13 @@ function within(root: ParentNode, selector: string): Element[] {
   return out;
 }
 
+/** The largest ancestor of `el` (or `el` itself) that doesn't contain `keep`. Never <body>/<html>. */
+function branchOf(el: Element, keep: Element): Element {
+  let b = el;
+  for (let p = b.parentElement; p && p !== document.body && p !== document.documentElement && !p.contains(keep); p = p.parentElement) b = p;
+  return b;
+}
+
 export function installDom(getRules: () => ActiveRules, initial: DomOptions, onError: (m: string) => void = () => {}): DomHandle {
   let opts = initial;
   const style = document.createElement("style");
@@ -155,7 +162,11 @@ export function installDom(getRules: () => ActiveRules, initial: DomOptions, onE
       if (rule.type === "hideClosest") applyClosest(root, id, rule);
       else if (rule.type === "hideAllButFirst") {
         // Document-wide by nature: "first" only means something globally.
-        within(document, rule.selector).slice(1).forEach((el) => hide(el, id));
+        const [first, ...rest] = within(document, rule.selector);
+        for (const m of rest) {
+          if (!rule.branch) hide(m, id);
+          else if (first && !m.contains(first) && !first.contains(m)) hide(branchOf(m, first), id);
+        }
       } else groups.set(rule.container, [...(groups.get(rule.container) ?? []), { id, rule }]);
     }
     for (const [selector, group] of groups) {

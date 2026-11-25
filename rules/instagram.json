@@ -2,8 +2,8 @@
   "$schema": "./schema/rule-pack.schema.json",
   "schemaVersion": 1,
   "platform": "instagram",
-  "revision": 7,
-  "minEngineVersion": 1,
+  "revision": 8,
+  "minEngineVersion": 2,
   "startPath": "/",
   "alwaysAllowRoutes": [
     "^/accounts/",
@@ -38,6 +38,12 @@
             "type": "hideAllButFirst",
             "selector": "article:has(a[href*=\"/reel/\"])",
             "when": "html[data-sr-path*=\"/reel/\"]"
+          },
+          {
+            "type": "hideAllButFirst",
+            "selector": "[role=\"group\"]:has(a[href^=\"/reels/audio/\"])",
+            "branch": true,
+            "when": "html[data-sr-path^=\"/direct/\"]"
           }
         ],
         "routes": [

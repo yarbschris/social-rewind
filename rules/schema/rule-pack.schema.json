@@ -251,6 +251,9 @@
             },
             "when": {
               "$ref": "#/$defs/selector"
+            },
+            "branch": {
+              "type": "boolean"
             }
           }
         }

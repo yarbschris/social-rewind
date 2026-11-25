@@ -162,3 +162,49 @@ describe("rev 7 rules from live markup", () => {
     expect([...document.querySelectorAll(tray)].map((e) => e.id)).toEqual(["tray"]);
   });
 });
+
+describe("shared-reel viewer in DMs (hideAllButFirst with branch)", () => {
+  let dom: DomHandle;
+  afterEach(() => dom.uninstall());
+  // Mirrors the live markup: the opened reel and the list of more reels are
+  // siblings under one wrapper, nested to different depths.
+  const player = (id: string) =>
+    `<div role="group" aria-label="Video player" data-id="${id}"><div><video></video><a href="/reels/audio/1/">audio</a></div></div>`;
+  const viewer =
+    `<section><div id="wrap"><div id="opened"><div><div>${player("r1")}</div></div></div>` +
+    `<div id="more"><div>${player("r2")}</div><div>${player("r3")}</div><div id="sentinel"></div></div></div></section>`;
+  const hiddenIds = () => [...document.querySelectorAll(`[${HIDDEN_ATTR}]`)].map((e) => e.id || e.getAttribute("data-id"));
+
+  beforeEach(() => {
+    document.documentElement.innerHTML = "<head></head><body><main></main></body>";
+    const rules = compile(config());
+    dom = installDom(() => rules, { debug: false, grayscale: false });
+  });
+
+  it("hides the whole list after the opened reel, loading slot included", async () => {
+    dom.setPath("/direct/t/1/");
+    dom.pathChanged();
+    document.querySelector("main")!.innerHTML = `<div id="thread"><a href="/reel/X/">shared reel</a></div>` + viewer;
+    await flush();
+    expect(hiddenIds()).toEqual(["more"]);
+  });
+
+  it("does nothing outside DMs", async () => {
+    dom.setPath("/");
+    dom.pathChanged();
+    document.querySelector("main")!.innerHTML = viewer;
+    await flush();
+    expect(hiddenIds()).toEqual([]);
+  });
+
+  it("hides reels that load later", async () => {
+    dom.setPath("/direct/t/1/");
+    dom.pathChanged();
+    document.querySelector("main")!.innerHTML = `<section><div><div id="opened">${player("r1")}</div><div id="more2"></div></div></section>`;
+    await flush();
+    expect(hiddenIds()).toEqual([]);
+    document.getElementById("more2")!.innerHTML = `<div>${player("r2")}</div>`;
+    await flush();
+    expect(hiddenIds()).toEqual(["more2"]);
+  });
+});

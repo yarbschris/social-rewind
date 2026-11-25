@@ -6,7 +6,7 @@
  */
 
 /** Bump when the engine gains a capability that rule packs may depend on. */
-export const ENGINE_VERSION = 1;
+export const ENGINE_VERSION = 2;
 
 export type FeatureId = string;
 export type ModeId = string; // "normal" | keys of RulePack.modes
@@ -110,6 +110,13 @@ export interface HideIfTextRule extends Conditional {
 export interface HideAllButFirstRule extends Conditional {
   type: "hideAllButFirst";
   selector: string;
+  /**
+   * Hide more than the match itself: for each later match, hide its largest
+   * ancestor that doesn't contain the first match (engine 2+). Used when the
+   * extra items sit in a separate list next to the first one, so the whole list
+   * goes, including whatever loads more when scrolled into view.
+   */
+  branch?: boolean;
 }
 
 export interface RouteRule {

@@ -241,6 +241,9 @@
             },
             "collapse": {
               "type": "boolean"
+            },
+            "withWrappers": {
+              "type": "boolean"
             }
           }
         },
@@ -265,6 +268,9 @@
               "type": "boolean"
             },
             "collapse": {
+              "type": "boolean"
+            },
+            "withWrappers": {
               "type": "boolean"
             }
           }

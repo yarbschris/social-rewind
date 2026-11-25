@@ -76,11 +76,11 @@ function labRuntime(config, KNOWN_SEGMENTS) {
         kind: r.type,
         matches: count(`[data-sr-hidden="${id}"]`),
         target:
-          r.type === "hideIfText"
+          (r.type === "hideIfText"
             ? `${r.container} ∋ ${JSON.stringify(r.text)}`
             : r.type === "hideAllButFirst"
               ? `all but first ${r.selector}${r.branch ? " (whole branch)" : ""}`
-              : `${r.match} → ${r.closest}${r.withWrappers ? " (+ wrappers)" : ""}`,
+              : `${r.match} → ${r.closest}`) + (r.withWrappers ? " (+ wrappers)" : "") + (r.collapse ? " (collapse)" : ""),
       });
     });
     return rows;

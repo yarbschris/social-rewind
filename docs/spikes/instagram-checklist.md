@@ -7,8 +7,13 @@
 - ✅ **Swiping on from a reel shared in DMs shows further reels, each one matched by `blockReels`.** Decision: a shared reel may open, but you can't scroll on to more (`hideAllButFirst` on reel routes). Still to verify: the path when a shared reel opens, and the reel container markup.
 - ✅ **"Suggested for you" always sat inside an `article`** (3 of 3 on Home), and `hideSuggested.dom0` caught each one. The separate carousel rule matched nothing, so it was removed.
 - ✅ Post counter counts on Home (7 posts). `a[href="/"]`, `/explore/`, `/reels/` and `/direct/inbox/` each appear once (the nav bar).
-- ✅ `blockAds.dom0` matched 1 article on Home. Still to confirm: was it an actual ad?
-- ❌ **Comment buttons:** `hideComments` matched nothing on Home.
+- ✅ **Ads:** `blockAds.dom0` catches real ads (user confirmed).
+- ✅ **Feed reels:** caught by `blockReels.dom0`.
+- ✅ **Identity:** rev 5 nav-scoped detection works.
+- ✅ **Nav icons and action buttons** are `svg[role="img"][aria-label="…"]` → `span` → `div` → `div[role="button"]` (Home, Explore, Reels, Messages, Like…).
+- ✅ The XHR "access control checks" errors are Instagram's own, logged during reload before our snippet runs.
+- ❌ **Comment buttons:** rev 5 matched nothing (wrong nesting). Rev 6 targets the real structure; needs re-checking.
+- ⬜ **Shared reel viewer:** the lab only outlines, so scrolling still works there by design. Need the path and `blockReels.dom1` count on the reel page.
 - ❌ **Stories tray:** `hideStories` matched nothing.
 - ❌ **Identity:** not detected with `[role=navigation]`. Rev 5 searches inside the nav bar (the common ancestor of the Home and Inbox links). Needs re-checking.
 

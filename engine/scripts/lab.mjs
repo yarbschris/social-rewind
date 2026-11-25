@@ -85,13 +85,15 @@ function labRuntime(config) {
 
   // Structure only: tags, roles, ARIA labels (truncated), href *patterns*. No text content,
   // so the output is safe to share. Usernames in hrefs are replaced with <user>.
-  const KNOWN = new Set(["p", "reel", "reels", "explore", "stories", "direct", "accounts", "saved", "people", "tags", "create"]);
+  const KNOWN = new Set(["p", "reel", "reels", "explore", "stories", "direct", "inbox", "t", "accounts", "saved", "people", "tags", "create", "search", "comments", "highlights"]);
   const hrefPattern = (href) => {
     if (!href) return null;
     try {
       const u = new URL(href, location.href);
       if (u.origin !== location.origin) return `${u.hostname}/…`;
-      return "/" + u.pathname.split("/").filter(Boolean).map((seg, i) => (KNOWN.has(seg) ? seg : i === 0 ? "<user>" : "<id>")).join("/") + "/";
+      const segs = u.pathname.split("/").filter(Boolean);
+      if (!segs.length) return "/";
+      return "/" + segs.map((seg, i) => (KNOWN.has(seg) ? seg : i === 0 ? "<user>" : "<id>")).join("/") + "/";
     } catch {
       return "?";
     }
@@ -221,7 +223,9 @@ export async function makeSnippet(pack, opts = {}) {
   // Plain Safari has no native bridge: log engine events to the console instead.
   try {
     if (!window.webkit?.messageHandlers?.socialRewind) {
-      window.webkit = Object.assign(window.webkit || {}, { messageHandlers: { socialRewind: { postMessage: (e) => console.log("[SR]", e.type, e) } } });
+      // identity events carry the username: redact before logging (output gets pasted into chats).
+      const redact = (e) => (e && e.type === "identity" ? { ...e, username: "<redacted, " + String(e.username).length + " chars>" } : e);
+      window.webkit = Object.assign(window.webkit || {}, { messageHandlers: { socialRewind: { postMessage: (e) => console.log("[SR]", e.type, redact(e)) } } });
     }
   } catch (e) { console.warn("[Social Rewind lab] couldn't attach event logger", e); }
 })();

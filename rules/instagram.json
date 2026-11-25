@@ -2,7 +2,7 @@
   "$schema": "./schema/rule-pack.schema.json",
   "schemaVersion": 1,
   "platform": "instagram",
-  "revision": 5,
+  "revision": 6,
   "minEngineVersion": 1,
   "startPath": "/",
   "alwaysAllowRoutes": [
@@ -98,7 +98,8 @@
           "a[href*=\"/comments/\"]",
           "textarea[aria-label*=\"comment\" i]",
           "form:has(> textarea[aria-label*=\"comment\" i])",
-          "[role=\"button\"]:has(> svg[aria-label=\"Comment\"])"
+          "div[role=\"button\"]:has(> div > span > svg[aria-label=\"Comment\" i])",
+          "svg[aria-label=\"Comment\" i]"
         ],
         "routes": [
           {

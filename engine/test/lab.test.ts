@@ -91,3 +91,23 @@ describe("Safari lab event log", () => {
     log.mockRestore();
   });
 });
+
+describe("Safari lab feed helpers", () => {
+  it("feedTail() lists the last posts and collapse() toggles the zero-height style", async () => {
+    document.documentElement.innerHTML =
+      '<head></head><body><main><article><a href="/p/A/">a</a></article><article><span>Sponsored</span><a href="/p/B/">b</a></article></main></body>';
+    (window as unknown as { __socialRewindLab?: boolean }).__socialRewindLab = false;
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+    const table = vi.spyOn(console, "table").mockImplementation(() => {});
+    new Function(await makeSnippet(loadPack("instagram"), { hide: true }))();
+    await flush();
+    const lab = (window as unknown as { SocialRewindLab: { feedTail(): Array<{ hiddenBy: string }>; collapse(on?: boolean): void } }).SocialRewindLab;
+    expect(lab.feedTail().map((r) => r.hiddenBy)).toEqual(["(shown)", "blockAds.dom0"]);
+    lab.collapse();
+    expect(document.getElementById("social-rewind-lab-collapse")!.textContent).toContain("height: 0");
+    lab.collapse(false);
+    expect(document.getElementById("social-rewind-lab-collapse")).toBeNull();
+    log.mockRestore();
+    table.mockRestore();
+  });
+});

@@ -191,6 +191,43 @@ function labRuntime(config, KNOWN_SEGMENTS) {
       console.log(lines.join("\n") + (lines.length >= max ? `\n… (stopped at ${max} lines)` : ""));
       return lines.length;
     },
+    /** The last `n` feed posts: which are hidden, and by which rule. */
+    feedTail(n = 8) {
+      const arts = [...document.querySelectorAll("article")];
+      const rows = arts.slice(-n).map((a) => {
+        const r = a.getBoundingClientRect();
+        return {
+          index: arts.indexOf(a),
+          hiddenBy: a.getAttribute("data-sr-hidden") ?? "(shown)",
+          height: Math.round(r.height),
+          belowViewportBy: Math.round(r.top - innerHeight),
+        };
+      });
+      console.log(`[Social Rewind lab] ${arts.length} articles, scrolled ${Math.round(scrollY)} of ${document.documentElement.scrollHeight}px`);
+      console.table(rows);
+      return rows;
+    },
+    /**
+     * Experiment: keep hidden elements in the layout at zero height instead of display:none,
+     * so the site's "load more" observers still see them pass. collapse(false) undoes it.
+     */
+    collapse(on = true) {
+      let s = document.getElementById("social-rewind-lab-collapse");
+      if (!on) {
+        s?.remove();
+        console.log("[Social Rewind lab] collapse off: hidden elements are display:none again");
+        return;
+      }
+      if (!s) {
+        s = document.createElement("style");
+        s.id = "social-rewind-lab-collapse";
+        (document.head ?? document.documentElement).appendChild(s);
+      }
+      s.textContent =
+        "[data-sr-hidden] { display: block !important; height: 0 !important; min-height: 0 !important; overflow: hidden !important;" +
+        " margin: 0 !important; padding: 0 !important; border: 0 !important; opacity: 0 !important; pointer-events: none !important; }";
+      console.log("[Social Rewind lab] collapse on: hidden elements now take 0px but stay in the layout. Keep scrolling: do new posts load?");
+    },
     /** Same, starting from an element (e.g. $0, the one selected in the Elements tab). */
     inspectElement(el, depth = 14) {
       const chain = [];

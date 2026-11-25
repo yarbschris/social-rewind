@@ -53,6 +53,7 @@ For each one, note the selector/label you'd use, or "not present on mobile web":
 ## Open questions from the engine review (verify, don't assume)
 Each of these came from a reviewer's memory of Instagram, so it's as unverified as the original rules.
 - [x] **Swallowed `pushState`:** it does happen. The DM inbox back button pushes `/` and Instagram renders Home even when the push is swallowed. Reel taps from DMs push nothing, and comment and Reels taps rendered nothing. Modes now reload on a swallowed push. Normal-mode filters are still inert, so watch for other buttons that render anyway.
+- [ ] **Feed stops loading (blank screen) after a while of scrolling.** One report had 28 articles, 18 of them hidden (7 reels, 5 ads, 6 suggested), so the feed hadn't run out. Suspected cause: Instagram loads more when the last posts come into view, and display:none posts never do. Checking with the lab's `feedTail()` and `collapse()` (zero height, kept in the layout). If collapsing fixes it, the engine should collapse instead of display:none for feed items, and pause any video inside them.
 - [ ] **Hide feed and runaway pagination:** with `hideFeed` on, does the Network tab show feed pages loading endlessly? If so, hide the feed container (sentinel included), or block the feed request natively.
 - [x] **Stories tray markup:** buttons, not links (see above).
 - [ ] **Suggested-accounts carousel:** does the `main div:has(> div > a[href^="/explore/people/"])` rule hide the whole carousel or only its header?

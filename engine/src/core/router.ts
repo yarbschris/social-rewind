@@ -141,9 +141,10 @@ export interface RouterHooks {
  * - In-app navigation (pushState/replaceState, link taps) to a filtered page is
  *   **inert**: nothing happens. Redirecting here would force a full page reload,
  *   since we can't drive the site's router, which loses the user's place.
- * - Except pushState/replaceState out of a **mode**: the site may render the new
- *   page even though the URL change was swallowed (Instagram's inbox back button
- *   does), and a mode is a lock, so reload to the mode's home instead.
+ * - Except a way out of a **mode** (pushState/replaceState or a link tap): reload
+ *   to the mode's home. The site may render the new page even when its URL change
+ *   is swallowed (Instagram's inbox back button does), a mode is a lock, and its
+ *   home is where "back" should land (a DM thread's back button links to a profile).
  * - Page loads and back/forward (check) redirect to an allowed page, since there
  *   is no previous page to stay on. These go through the loop breaker.
  */
@@ -213,10 +214,14 @@ export function installRouter(getRules: () => ActiveRules, hooks: RouterHooks): 
     if (path === null) return;
     const d = evaluateRoute(path, getRules());
     if (d.action === "allow") return;
-    // Inert: stay where the user is.
+    // Inert: stay where the user is...
     e.preventDefault();
     e.stopImmediatePropagation();
     report(path, d);
+    // ...unless it's a way out of a mode: go to the mode's home instead. In DMs only,
+    // a thread's back button links to the other person's profile, and the inbox is
+    // where "back" should land.
+    if (d.action === "redirect" && d.byMode) navigate(d.to);
   };
 
   addEventListener("popstate", onPop);

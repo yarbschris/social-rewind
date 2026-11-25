@@ -41,3 +41,5 @@ No Screen Time equivalent. Options are an AccessibilityService (strict Google Pl
 Sleep mode, time limits (DeviceActivity), weekly on-device stats.
 
 Idea (low demand, maybe): a **text-only mode** that hides images and video.
+
+Idea: a **conversation feed**. Scroll through the posts and reels shared in one DM thread, from both people, as a feed (TikTok has this). Build it only from what the thread page already shows, on-device. Don't call Instagram's private APIs or store anything. Legal and App Review notes are in the PR or issue that picks this up.

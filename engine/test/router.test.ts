@@ -191,7 +191,7 @@ describe("installRouter", () => {
     expect(events[0]).toMatchObject({ type: "routeBlocked", path: "/", reason: "mode:dmsOnly", redirectedTo: "/direct/inbox/" });
   });
 
-  it("taps on links out of a mode stay inert (nothing renders, no reload)", () => {
+  it("taps on links out of a mode go to the mode home", () => {
     history.replaceState(null, "", "/direct/inbox/");
     install(dms);
     const a = document.createElement("a");
@@ -200,7 +200,7 @@ describe("installRouter", () => {
     const ev = new MouseEvent("click", { bubbles: true, cancelable: true, button: 0 });
     a.dispatchEvent(ev);
     expect(ev.defaultPrevented).toBe(true);
-    expect(navs).toEqual([]);
+    expect(navs).toEqual(["https://www.instagram.com/direct/inbox/"]);
     a.remove();
   });
 

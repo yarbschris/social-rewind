@@ -15,6 +15,9 @@ An open-source (Apache-2.0) iOS app that blocks social media apps through Apple'
 - `ios/`: XcodeGen spec `project.yml`, app target `SocialRewind`, extensions under `Extensions/`, and pure-Swift logic in the local package `Packages/RewindCore` (testable with `swift test`, no Xcode needed).
 - `docs/decisions/`: ADRs. Add one for any significant decision.
 
+## Git workflow
+- **Never commit to `main`.** Branch first (`git switch -c rules/…`, `engine/…`, `ios/…` or `docs/…`), one feature or fix per branch, push it, and open a PR with `gh pr create`. The maintainer merges.
+
 ## Product decisions (settled)
 - Instagram first. Modes: normal, *DMs only*, *Saved posts only* (shows only the user's saved posts).
 - Rule refresh is optional and off by default.

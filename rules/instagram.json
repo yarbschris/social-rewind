@@ -2,7 +2,7 @@
   "$schema": "./schema/rule-pack.schema.json",
   "schemaVersion": 1,
   "platform": "instagram",
-  "revision": 13,
+  "revision": 14,
   "minEngineVersion": 2,
   "startPath": "/",
   "alwaysAllowRoutes": [
@@ -357,7 +357,7 @@
       "home": "/{username}/saved/",
       "allowRoutes": [
         "^/[^/]+/saved(?:/.*)?$",
-        "^/(?:[^/]+/)?p/[^/]+/?$"
+        "^/(?:[^/]+/)?(?:p|reel)/[^/]+/?$"
       ],
       "rules": {
         "css": [

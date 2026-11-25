@@ -2,7 +2,7 @@
   "$schema": "./schema/rule-pack.schema.json",
   "schemaVersion": 1,
   "platform": "instagram",
-  "revision": 15,
+  "revision": 16,
   "minEngineVersion": 2,
   "startPath": "/",
   "alwaysAllowRoutes": [
@@ -136,6 +136,14 @@
             "pattern": "^/stories(?:/|$)",
             "action": "redirect",
             "to": "/"
+          }
+        ],
+        "dom": [
+          {
+            "type": "hideClosest",
+            "match": "div:has(> div[role=\"button\"][aria-label^=\"Story by\"]:nth-child(2))",
+            "closest": "div",
+            "withWrappers": true
           }
         ]
       }

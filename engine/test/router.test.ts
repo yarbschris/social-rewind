@@ -197,6 +197,61 @@ describe("installRouter", () => {
     expect(events[0]).toMatchObject({ type: "routeBlocked", path: "/", reason: "mode:dmsOnly", redirectedTo: "/direct/inbox/" });
   });
 
+  describe("leaving a mode back to where you came from", () => {
+    let backs: number;
+    const installBack = () => {
+      navs = [];
+      events = [];
+      backs = 0;
+      handle = installRouter(() => dms, {
+        onPathChange: () => {},
+        report: (e) => events.push(e),
+        replace: (h) => navs.push(h),
+        back: () => {
+          backs++;
+          history.replaceState(null, "", "/direct/inbox/"); // what the site's router does on popstate
+        },
+        backTimeoutMs: 10,
+      });
+    };
+    const tap = (href: string) => {
+      const a = document.createElement("a");
+      a.href = href;
+      document.body.appendChild(a);
+      a.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, button: 0 }));
+      a.remove();
+    };
+
+    it("steps back to the inbox without a reload when you came from it", async () => {
+      history.replaceState(null, "", "/direct/inbox/");
+      installBack();
+      history.pushState(null, "", "/direct/t/1/");
+      tap("/someone/");
+      await new Promise((r) => setTimeout(r, 30));
+      expect(backs).toBe(1);
+      expect(navs).toEqual([]);
+    });
+
+    it("reloads to the inbox when you didn't come from it", () => {
+      history.replaceState(null, "", "/direct/t/1/");
+      installBack();
+      tap("/someone/");
+      expect(backs).toBe(0);
+      expect(navs).toEqual(["https://www.instagram.com/direct/inbox/"]);
+    });
+
+    it("reloads if stepping back doesn't land", async () => {
+      history.replaceState(null, "", "/direct/inbox/");
+      navs = [];
+      events = [];
+      handle = installRouter(() => dms, { onPathChange: () => {}, report: () => {}, replace: (h) => navs.push(h), back: () => {}, backTimeoutMs: 10 });
+      history.pushState(null, "", "/direct/t/1/");
+      tap("/someone/");
+      await new Promise((r) => setTimeout(r, 30));
+      expect(navs).toEqual(["https://www.instagram.com/direct/inbox/"]);
+    });
+  });
+
   it("taps on links out of a mode go to the mode home", () => {
     history.replaceState(null, "", "/direct/inbox/");
     install(dms);

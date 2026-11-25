@@ -42,7 +42,10 @@ Sleep mode, time limits (DeviceActivity), weekly on-device stats.
 
 Idea: **Threads support** (threads.com) as its own platform, instead of only hiding Instagram's link to it.
 
-Open question: **links to other sites open in Safari**, where instagram.com isn't filtered. Consider also shielding the platforms' web domains in Safari through Screen Time (`ManagedSettings` web-domain shields), or keeping external links inside an in-app browser that refuses the platform's own hosts.
+**Block the platforms' websites in Safari** (decided; needs a device). Links to other sites open in Safari, and you can open Safari yourself, so instagram.com must be blocked there too. Plan: when a platform is locked, also block its web domains through Screen Time.
+- First, on a device: check that the block doesn't also hit Social Rewind's own web view, since Screen Time's web filter may apply to all WebKit views. Try both `ManagedSettingsStore.webContent.blockedByFilter = .specific([WebDomain(domain:)])` and `shield.webDomains` (tokens from the picker), and keep whichever blocks Safari but not our app.
+- If neither spares our web view, fall back to an in-app browser for external links that refuses the platforms' hosts (about a day of work), and accept that typing the URL into Safari isn't covered.
+- An in-app browser is a convenience on top of this, not a requirement, once Safari is blocked.
 
 Idea (low demand, maybe): a **text-only mode** that hides images and video.
 

@@ -50,3 +50,14 @@ describe("compile", () => {
     expect(resolveHome("/{username}/saved/", "a/b")).toBe("/a%2Fb/saved/");
   });
 });
+
+describe("Threads link", () => {
+  it("is hidden by default, and always in a locked mode", () => {
+    const has = (r: ReturnType<typeof compile>) => r.css.some((c) => c.rule.includes("threads.net"));
+    expect(has(compile(config()))).toBe(true);
+    const off = { features: { hideThreadsLink: false } };
+    expect(has(compile(config({ settings: settings(off) })))).toBe(false);
+    expect(has(compile(config({ settings: settings({ ...off, mode: "dmsOnly" }) })))).toBe(true);
+    expect(has(compile(config({ settings: settings({ ...off, mode: "savedOnly" }), username: "me" })))).toBe(true);
+  });
+});

@@ -40,6 +40,10 @@ No Screen Time equivalent. Options are an AccessibilityService (strict Google Pl
 ## Later features
 Sleep mode, time limits (DeviceActivity), weekly on-device stats.
 
+Idea: **Threads support** (threads.com) as its own platform, instead of only hiding Instagram's link to it.
+
+Open question: **links to other sites open in Safari**, where instagram.com isn't filtered. Consider also shielding the platforms' web domains in Safari through Screen Time (`ManagedSettings` web-domain shields), or keeping external links inside an in-app browser that refuses the platform's own hosts.
+
 Idea (low demand, maybe): a **text-only mode** that hides images and video.
 
 Idea: a **conversation feed**. Scroll through the posts and reels shared in one DM thread, from both people, as a feed (TikTok has this). Build it only from what the thread page already shows, on-device. Don't call Instagram's private APIs or store anything. Legal and App Review notes are in the PR or issue that picks this up.

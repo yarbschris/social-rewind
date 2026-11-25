@@ -2,7 +2,7 @@
   "$schema": "./schema/rule-pack.schema.json",
   "schemaVersion": 1,
   "platform": "instagram",
-  "revision": 13,
+  "revision": 15,
   "minEngineVersion": 2,
   "startPath": "/",
   "alwaysAllowRoutes": [
@@ -163,6 +163,18 @@
             ],
             "when": "html[data-sr-path^=\"/direct/\"]"
           }
+        ]
+      }
+    },
+    "hideThreadsLink": {
+      "title": "Hide Threads link",
+      "description": "Hides the link to Threads, which would open outside Social Rewind.",
+      "group": "content",
+      "default": true,
+      "rules": {
+        "css": [
+          "a[href*=\"threads.net\"]",
+          "a[href*=\"threads.com\"]"
         ]
       }
     },
@@ -339,7 +351,9 @@
           "a[href=\"/\"]",
           "a[href=\"/explore/\"]",
           "a[href=\"/reels/\"]",
-          "a[href=\"/create/select/\"]"
+          "a[href=\"/create/select/\"]",
+          "a[href*=\"threads.net\"]",
+          "a[href*=\"threads.com\"]"
         ],
         "dom": [
           {
@@ -363,7 +377,9 @@
         "css": [
           "a[href=\"/explore/\"]",
           "a[href=\"/reels/\"]",
-          "a[href=\"/direct/inbox/\"]"
+          "a[href=\"/direct/inbox/\"]",
+          "a[href*=\"threads.net\"]",
+          "a[href*=\"threads.com\"]"
         ]
       }
     }

@@ -76,7 +76,7 @@ targets:
         PRODUCT_NAME: SocialRewind
         # The engine build script reads ../engine and ../rules, so Xcode's script sandbox must be off.
         ENABLE_USER_SCRIPT_SANDBOXING: NO
-        ASSETCATALOG_COMPILER_APPICON_NAME: ""
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
 
   ShieldConfiguration:
     type: app-extension

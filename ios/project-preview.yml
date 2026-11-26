@@ -1,0 +1,15 @@
+include:
+  - project.yml
+name: SocialRewindPreview
+targets:
+  SocialRewind:
+    dependencies:REPLACE:
+      - package: RewindCore
+    entitlements:REPLACE:
+      path: SocialRewind/SocialRewindPreview.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - $(SR_APP_GROUP)
+    settings:
+      base:
+        SWIFT_ACTIVE_COMPILATION_CONDITIONS: $(inherited) SR_NO_SCREEN_TIME

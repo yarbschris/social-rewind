@@ -27,7 +27,11 @@ struct OnboardingView: View {
     private var platforms: [Platform] { Platform.allCases.filter(\.isAvailable) }
 
     /// Every step in order, for the progress label and Back.
-    private var steps: [Step] { [.welcome, .authorize] + platforms.map(Step.pick) + [.notifications] }
+    /// The TestFlight preview has no Screen Time, so it skips straight from welcome to the app.
+    private var steps: [Step] {
+        guard BuildFeatures.screenTime else { return [.welcome] }
+        return [.welcome, .authorize] + platforms.map(Step.pick) + [.notifications]
+    }
 
     var body: some View {
         VStack(spacing: 24) {
@@ -73,9 +77,11 @@ struct OnboardingView: View {
     private var welcome: some View {
         StepView(systemImage: "gobackward",
                  title: "Social media, minus the bits built to keep you scrolling",
-                 message: "Social Rewind locks the apps on your phone and lets you back in through a filtered view: no Reels, no suggested posts, no ads, unless you want them.",
+                 message: BuildFeatures.screenTime
+                    ? "Social Rewind locks the apps on your phone and lets you back in through a filtered view: no Reels, no suggested posts, no ads, unless you want them."
+                    : "This preview opens social media through a filtered view: no Reels, no suggested posts, no ads, unless you want them. Locking the apps themselves comes in a later build.",
                  actionTitle: "Get started") {
-            step = .authorize
+            if BuildFeatures.screenTime { step = .authorize } else { finish() }
         }
     }
 

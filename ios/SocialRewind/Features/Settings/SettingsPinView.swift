@@ -4,16 +4,24 @@ import SwiftUI
 /// Turn the settings PIN on or off, change it, or cancel a pending reset.
 struct SettingsPinView: View {
     @Environment(AppModel.self) private var model
-    /// Shows the new-PIN fields: always when there's no PIN, and after "Change PIN" is unlocked.
-    @State private var choosingPin = false
+    @State private var settingUp = false
 
     var body: some View {
         Form {
-            if let pin = model.settingsPin, !choosingPin {
+            if let pin = model.settingsPin {
                 Section {
                     Button("Change PIN") {
-                        model.guarded(loosens: true, "Changing the settings PIN needs the current PIN.") { _ in
-                            choosingPin = true
+                        if model.settingsUnlocked {
+                            settingUp = true
+                        } else {
+                            model.guarded(loosens: true, "Enter your current PIN to change it.") { _ in
+                                // Let the PIN prompt finish closing: a sheet presented while another
+                                // is still dismissing can be dropped.
+                                Task { @MainActor in
+                                    try? await Task.sleep(for: .milliseconds(600))
+                                    settingUp = true
+                                }
+                            }
                         }
                     }
                     Button("Turn off PIN", role: .destructive) { model.removePin() }
@@ -30,54 +38,73 @@ struct SettingsPinView: View {
                     }
                 }
             } else {
-                NewPinSection(isChange: model.settingsPin != nil) { choosingPin = false }
+                Section {
+                    Button("Turn on PIN") { settingUp = true }
+                } footer: {
+                    Text("With a PIN set, loosening any restriction asks for it: turning a filter off, leaving DMs only or Saved posts only, making reminders less frequent or unlocking an app. Making things stricter never does. A friend can set it for you. If it's forgotten, it can be reset after a 24-hour wait.")
+                }
             }
         }
         .navigationTitle("Settings PIN")
+        .sheet(isPresented: $settingUp) {
+            PinSetupView(isChange: model.settingsPin != nil)
+        }
     }
 }
 
-private struct NewPinSection: View {
+/// Choose a new PIN, then enter it again, like setting a passcode in iOS Settings.
+private struct PinSetupView: View {
     @Environment(AppModel.self) private var model
+    @Environment(\.dismiss) private var dismiss
     let isChange: Bool
-    let done: () -> Void
-    @State private var pin = ""
-    @State private var confirmation = ""
-    @State private var problem: String?
+    @State private var length = 6
+    @State private var first: String?
+    @State private var message: String?
+    @State private var showOptions = false
 
     var body: some View {
-        Section {
-            // No textContentType: a password type would invite iOS to suggest or save "passwords",
-            // and AutoFill would bring back Face ID, which the PIN deliberately avoids.
-            SecureField("New PIN (4–6 digits)", text: $pin)
-                .keyboardType(.numberPad)
-            SecureField("Confirm PIN", text: $confirmation)
-                .keyboardType(.numberPad)
-            Button(isChange ? "Save new PIN" : "Turn on PIN", action: save)
-                .disabled(pin.isEmpty || confirmation.isEmpty)
-            if let problem {
-                Text(problem).font(.footnote).foregroundStyle(.red)
+        NavigationStack {
+            PasscodeEntry(title: first == nil ? (isChange ? "Enter a new PIN" : "Choose a PIN") : "Enter it again",
+                          message: message,
+                          length: length,
+                          submit: submit) {
+                if first == nil {
+                    Button("PIN Options") { showOptions = true }
+                        .font(.body)
+                }
             }
-        } footer: {
-            Text("With a PIN set, loosening any restriction asks for it: turning a filter off, leaving DMs only or Saved posts only, making reminders less frequent or unlocking an app. Making things stricter never does. A friend can set it for you. If it's forgotten, it can be reset after a 24-hour wait.")
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
+            }
+            .confirmationDialog("PIN length", isPresented: $showOptions) {
+                Button("4-Digit PIN") { choose(4) }
+                Button("6-Digit PIN") { choose(6) }
+            }
         }
-        .onChange(of: pin) { _, _ in problem = nil }
-        .onChange(of: confirmation) { _, _ in problem = nil }
+        .interactiveDismissDisabled()
     }
 
-    private func save() {
-        guard SettingsPin.isValid(pin) else {
-            problem = "Use 4 to 6 digits."
-            return
+    private func choose(_ digits: Int) {
+        length = digits
+        message = nil
+    }
+
+    private func submit(_ code: String) -> Bool {
+        guard let first else {
+            self.first = code
+            message = nil
+            return true
         }
-        guard pin == confirmation else {
-            problem = "The PINs don't match."
-            return
+        guard code == first else {
+            self.first = nil
+            message = "The PINs didn't match. Try again."
+            return false
         }
-        model.setPin(pin)
-        pin = ""
-        confirmation = ""
-        done()
+        model.setPin(code)
+        dismiss()
+        return true
     }
 }
 
@@ -86,66 +113,48 @@ struct PinPromptView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.dismiss) private var dismiss
     let prompt: PinPrompt
-    @State private var pin = ""
     @State private var message: String?
     @State private var confirmReset = false
-    @FocusState private var focused: Bool
 
     var body: some View {
-        NavigationStack {
-            Form {
-                Section {
-                    SecureField("PIN", text: $pin)
-                        .keyboardType(.numberPad)
-                        .focused($focused)
-                        .onSubmit(submit)
-                    Button("Unlock", action: submit)
-                        .disabled(pin.isEmpty)
-                    if let message {
-                        Text(message).font(.footnote).foregroundStyle(.red)
-                    }
-                } footer: {
-                    Text(prompt.reason)
+        PasscodeEntry(title: "Enter Settings PIN",
+                      message: message ?? prompt.reason,
+                      length: model.settingsPin?.length,
+                      submit: submit) {
+            HStack {
+                if let date = model.settingsPin?.resetDate {
+                    Text("PIN removed \(date.formatted(.relative(presentation: .named)))")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                } else {
+                    Button("Forgot PIN?") { confirmReset = true }
                 }
-
-                Section {
-                    if let date = model.settingsPin?.resetDate {
-                        Text("The PIN will be removed \(date.formatted(.relative(presentation: .named))). Entering it before then cancels the reset.")
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
-                    } else {
-                        Button("Forgot PIN?") { confirmReset = true }
-                    }
+                Spacer()
+                Button("Cancel") {
+                    model.pinPrompt = nil
+                    dismiss()
                 }
             }
-            .navigationTitle("Enter settings PIN")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
-                        model.pinPrompt = nil
-                        dismiss()
-                    }
-                }
-            }
-            .confirmationDialog("Reset the PIN?", isPresented: $confirmReset, titleVisibility: .visible) {
-                Button("Remove PIN in 24 hours", role: .destructive) { model.requestPinReset() }
-            } message: {
-                Text("The PIN will be removed after a 24-hour wait. Until then, everything stays as it is.")
-            }
-            .onAppear { focused = true }
+        }
+        .presentationDetents([.large])
+        .interactiveDismissDisabled()
+        .confirmationDialog("Reset the PIN?", isPresented: $confirmReset, titleVisibility: .visible) {
+            Button("Remove PIN in 24 hours", role: .destructive) { model.requestPinReset() }
+        } message: {
+            Text("The PIN will be removed after a 24-hour wait. Until then, everything stays as it is.")
         }
     }
 
-    private func submit() {
+    private func submit(_ pin: String) -> Bool {
         switch model.enterPin(pin) {
         case .correct:
             dismiss()
+            return true
         case .wrong(let left):
             message = left == 1 ? "Wrong PIN. 1 try left before a pause." : "Wrong PIN. \(left) tries left before a pause."
         case .paused(let until):
             message = "Too many tries. Try again \(until.formatted(.relative(presentation: .named)))."
         }
-        pin = ""
+        return false
     }
 }

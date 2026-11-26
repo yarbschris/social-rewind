@@ -41,6 +41,9 @@ public struct SettingsPin: Codable, Sendable, Equatable {
 
     private var salt: Data
     private var hash: Data
+    /// Digits in the PIN, so the keypad can show that many dots and submit when they're filled.
+    /// nil for PINs saved before it was recorded; the keypad then shows an OK button.
+    public private(set) var length: Int?
     /// Set by "Forgot PIN". The PIN is removed once `resetDelay` has passed.
     public private(set) var resetRequestedAt: Date?
     public private(set) var failedAttempts = 0
@@ -54,6 +57,7 @@ public struct SettingsPin: Codable, Sendable, Equatable {
         for i in bytes.indices { bytes[i] = rng.next() }
         salt = Data(bytes)
         hash = Self.digest(pin, salt: salt)
+        length = pin.count
     }
 
     public static func isValid(_ pin: String) -> Bool {

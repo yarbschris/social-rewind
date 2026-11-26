@@ -89,6 +89,17 @@ private func lockPack() throws -> RulePack {
         #expect(!encoded.contains("2468"))
     }
 
+    @Test func remembersItsLength() throws {
+        #expect(try #require(SettingsPin(pin: "1234")).length == 4)
+        #expect(try #require(SettingsPin(pin: "123456")).length == 6)
+        // PINs saved before the length was recorded still decode.
+        var legacy = try JSONSerialization.jsonObject(with: JSONEncoder().encode(try #require(SettingsPin(pin: "2468")))) as! [String: Any]
+        legacy["length"] = nil
+        var pin = try JSONDecoder().decode(SettingsPin.self, from: JSONSerialization.data(withJSONObject: legacy))
+        #expect(pin.length == nil)
+        #expect(pin.attempt("2468") == .correct)
+    }
+
     @Test func saltsEachPin() throws {
         let a = try #require(SettingsPin(pin: "1111"))
         let b = try #require(SettingsPin(pin: "1111"))

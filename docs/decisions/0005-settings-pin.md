@@ -19,6 +19,7 @@ Filters only help if loosening them takes more than an impulse. Two ways around 
   - changing or removing the PIN.
 - **The PIN guards loosening, not every screen.** A correct PIN unlocks settings for 5 minutes, or until the app goes to the background.
 - **Face ID is deliberately not an option,** since the phone's owner always passes it.
+- **Entry looks like the iOS passcode screen:** dots, a round number pad, and a shake and buzz on a wrong PIN. iOS has no public passcode UI for an app's own PIN, and its system prompt checks the device passcode or Face ID instead. New PINs are 4 or 6 digits, chosen under "PIN Options" as in iOS Settings.
 - **No permanent lockout.**
   - Five wrong guesses pause entry for a minute.
   - "Forgot PIN" removes the PIN after 24 hours, and entering the right PIN cancels that.

@@ -25,6 +25,8 @@ Filters only help if loosening them takes more than an impulse. Two ways around 
 - **Storage:** only a salted SHA-256 hash, in the App Group's UserDefaults rather than the Keychain, so deleting the app clears it along with everything else.
 
 ## Consequences
+- The waits use the device clock, so moving the date forward in iOS Settings skips the 24-hour reset and the pause. That's accepted for now. Hardening it would mean tracking elapsed time across reboots.
+- The PIN fields set no `textContentType`, so iOS doesn't offer to save the PIN as a password or fill it with Face ID.
 - The PIN is friction, not security. Anyone holding the phone can delete the app, and with it the Screen Time shields. Settings copy shouldn't promise more than that.
 - Every setter that can loosen something goes through `AppModel.guarded`. Bindings call the model's methods, never its stored properties: `reminders` is `private(set)` for this reason.
 - Settings that neither loosen nor tighten skip the PIN: the username, and the opt-in rule refresh.

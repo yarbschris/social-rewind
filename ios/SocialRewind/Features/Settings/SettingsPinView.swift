@@ -47,12 +47,12 @@ private struct NewPinSection: View {
 
     var body: some View {
         Section {
+            // No textContentType: a password type would invite iOS to suggest or save "passwords",
+            // and AutoFill would bring back Face ID, which the PIN deliberately avoids.
             SecureField("New PIN (4–6 digits)", text: $pin)
                 .keyboardType(.numberPad)
-                .textContentType(.newPassword)
             SecureField("Confirm PIN", text: $confirmation)
                 .keyboardType(.numberPad)
-                .textContentType(.newPassword)
             Button(isChange ? "Save new PIN" : "Turn on PIN", action: save)
                 .disabled(pin.isEmpty || confirmation.isEmpty)
             if let problem {
@@ -97,7 +97,6 @@ struct PinPromptView: View {
                 Section {
                     SecureField("PIN", text: $pin)
                         .keyboardType(.numberPad)
-                        .textContentType(.password)
                         .focused($focused)
                         .onSubmit(submit)
                     Button("Unlock", action: submit)

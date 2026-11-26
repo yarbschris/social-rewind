@@ -55,9 +55,13 @@ private struct PlatformRow: View {
                 PlatformSettingsView(platform: platform)
             } label: {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(platform.displayName).font(.headline)
-                    Text(summary).font(.caption).foregroundStyle(.secondary)
+                    Text(platform.displayName).font(.title3.weight(.semibold))
+                    // An empty Text still takes a line and pushes the name off centre.
+                    if !summary.isEmpty {
+                        Text(summary).font(.subheadline).foregroundStyle(.secondary)
+                    }
                 }
+                .padding(.vertical, 4)
             }
             Button("Open") { model.openPlatform = platform }
                 .buttonStyle(.borderedProminent)
@@ -65,12 +69,20 @@ private struct PlatformRow: View {
         }
     }
 
+    /// Lock state (when this build has Screen Time), then the mode, or in normal mode how many filters are on.
     private var summary: String {
         let locked = model.lockedPlatforms.contains(platform) && model.selections[platform] != nil
-        let mode = model.settings(for: platform).mode
-        let modeTitle = model.rulePack(for: platform)?.pack.modes?[mode]?.title
         let lockState = BuildFeatures.screenTime ? (locked ? "App locked" : "App not locked") : nil
-        return [lockState, modeTitle].compactMap { $0 }.joined(separator: " · ")
+        return [lockState, modeSummary].compactMap { $0 }.joined(separator: " · ")
+    }
+
+    private var modeSummary: String? {
+        guard let pack = model.rulePack(for: platform)?.pack else { return nil }
+        let settings = model.settings(for: platform)
+        if let title = pack.modes?[settings.mode]?.title { return title }
+        let available = pack.features.values.filter(\.isAvailable).count
+        let on = settings.effectiveFeatures(for: pack).values.filter { $0 }.count
+        return available > 0 ? "\(on) of \(available) filters on" : nil
     }
 }
 

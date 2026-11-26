@@ -30,9 +30,11 @@ struct HomeView: View {
                     NavigationLink { StatsView() } label: { Image(systemName: "chart.bar") }
                         .accessibilityLabel("Today's stats")
                 }
-                ToolbarItem(placement: .topBarTrailing) {
-                    NavigationLink { LockedAppsView() } label: { Image(systemName: "lock.shield") }
-                        .accessibilityLabel("Locked apps")
+                if BuildFeatures.screenTime {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        NavigationLink { LockedAppsView() } label: { Image(systemName: "lock.shield") }
+                            .accessibilityLabel("Locked apps")
+                    }
                 }
             }
             .fullScreenCover(item: $model.openPlatform) { platform in
@@ -67,7 +69,8 @@ private struct PlatformRow: View {
         let locked = model.lockedPlatforms.contains(platform) && model.selections[platform] != nil
         let mode = model.settings(for: platform).mode
         let modeTitle = model.rulePack(for: platform)?.pack.modes?[mode]?.title
-        return [locked ? "App locked" : "App not locked", modeTitle].compactMap { $0 }.joined(separator: " · ")
+        let lockState = BuildFeatures.screenTime ? (locked ? "App locked" : "App not locked") : nil
+        return [lockState, modeTitle].compactMap { $0 }.joined(separator: " · ")
     }
 }
 

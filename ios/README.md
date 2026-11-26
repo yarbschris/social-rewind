@@ -37,6 +37,24 @@ cd ios/Packages/RewindCore && swift test
 
 All four targets use `com.apple.developer.family-controls`. Development builds on your own device work once the capability is enabled for your team. **TestFlight and App Store builds need Apple to approve the distribution entitlement.** Request it early at developer.apple.com → Account → Family Controls (Distribution), once for each bundle ID: the app and all three extensions.
 
+### TestFlight preview (no Screen Time)
+
+Until the distribution entitlement is approved, TestFlight gets a preview build. `project-preview.yml` includes `project.yml` and changes three things:
+- it leaves out the three extensions;
+- it drops `family-controls` from the app's entitlements;
+- it sets `SR_NO_SCREEN_TIME`, so `BuildFeatures.screenTime` is false.
+
+That turns off onboarding's Screen Time steps, the Locked apps screen, and every `ManagedSettingsStore` call. The filtered browser is unchanged.
+
+```sh
+scripts/testflight.sh              # archive, verify, upload to App Store Connect
+scripts/testflight.sh --no-upload  # archive, verify, export the .ipa only
+```
+
+The script needs your Apple ID signed in to Xcode and an App Store Connect record for the bundle ID. It numbers each build by UTC timestamp. Before exporting, it checks the archived app itself: no Family Controls, App Group present, no extensions, and filters, icon and privacy manifest bundled. Once Apple approves the entitlement, drop the preview and archive `SocialRewind.xcodeproj` instead.
+
+The app icon is drawn by `scripts/make-app-icon.swift`. To change it, edit that script and rerun it rather than replacing the PNG by hand.
+
 If `app.socialrewind` isn't registered to your team, set `SR_BUNDLE_PREFIX` in `Local.xcconfig`. The App Group (`group.<prefix>`) follows it automatically, and the code reads it from Info.plist.
 
 ## How a session works

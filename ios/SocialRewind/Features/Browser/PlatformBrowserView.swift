@@ -8,7 +8,6 @@ struct PlatformBrowserView: View {
 
     let platform: Platform
     @State private var browser: BrowserController
-    @State private var showSettings = false
     /// Scripts fixed at web view creation; later changes go through `browser.apply`.
     @State private var initialScripts: InjectedScripts?
 
@@ -57,12 +56,6 @@ struct PlatformBrowserView: View {
             ReminderSheet(reminder: reminder, platform: platform) { dismiss() }
                 .presentationDetents([.medium])
         }
-        .sheet(isPresented: $showSettings) {
-            NavigationStack {
-                PlatformSettingsView(platform: platform)
-                    .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { showSettings = false } } }
-            }
-        }
     }
 
     private func reapply(reload: Bool) {
@@ -109,11 +102,8 @@ struct PlatformBrowserView: View {
                     .contentTransition(.numericText())
                     .accessibilityLabel("\(browser.sessionPosts) posts viewed this session")
             }
-
-            Button { showSettings = true } label: {
-                Image(systemName: "slider.horizontal.3")
-            }
-            .accessibilityLabel("Filter settings")
+            // No settings button here on purpose: filters change from Home, outside the feed,
+            // so they can't be loosened on impulse mid-scroll.
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)

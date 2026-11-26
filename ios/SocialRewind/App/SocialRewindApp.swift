@@ -53,11 +53,17 @@ struct RootView: View {
         }
         .onChange(of: scenePhase) { _, phase in
             switch phase {
-            case .active: model.applyDuePinReset()
-            case .background: model.lockSettings()
-            default: break
+            case .active:
+                model.applyDuePinReset()
+                // Notification permission can change in iOS Settings while the app is in the background.
+                Task { await model.refreshNotificationPermission() }
+            case .background:
+                model.lockSettings()
+            default:
+                break
             }
         }
+        .task { await model.refreshNotificationPermission() }
     }
 }
 

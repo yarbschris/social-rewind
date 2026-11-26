@@ -50,3 +50,9 @@ Idea: **Threads support** (threads.com) as its own platform, instead of only hid
 Idea (low demand, maybe): a **text-only mode** that hides images and video.
 
 Idea: a **conversation feed**. Scroll through the posts and reels shared in one DM thread, from both people, as a feed (TikTok has this). Build it only from what the thread page already shows, on-device. Don't call Instagram's private APIs or store anything. Legal and App Review notes are in the PR or issue that picks this up.
+
+Idea: **family mode**. A parent installs Social Rewind, pairs it with their child's copy, and manages the child's settings from their own phone. Feasible without a server of our own:
+- **Authorization:** on the child's phone, Screen Time's child authorization (`AuthorizationCenter.requestAuthorization(for: .child)`) runs through Family Sharing. A parent then has to approve removing the app or revoking access, which is far stronger than the settings PIN.
+- **Transport:** CloudKit sharing (`CKShare`) between the parent's and the child's Apple Accounts. The child's copy subscribes and applies the settings, filters, limits and shields itself, because a parent's device can't shield apps on another phone directly. The data sits in Apple's iCloud, never on a server of ours.
+- **Constraint change:** this is new network traffic. CLAUDE.md allows only the platforms' hosts and the opt-in rule refresh, so family mode needs an explicit decision (an ADR), has to stay opt-in, and must sync settings only, never what the child views.
+- **Low-tech version today:** a parent sets the settings PIN on the child's phone.

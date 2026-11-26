@@ -1,6 +1,16 @@
 import SwiftUI
 import UIKit
 
+/// What a submitted passcode led to. It decides the haptic and whether the dots shake.
+enum PasscodeResult {
+    /// Accepted for good: the PIN unlocked something, or a new PIN was saved.
+    case accepted
+    /// Accepted, with another step to come, e.g. "Enter it again".
+    case next
+    /// Wrong or mismatched: shake, buzz, clear.
+    case rejected
+}
+
 /// A passcode screen in the style of the iOS lock screen: a title, dots, and a round number pad.
 /// iOS has no public passcode UI for an app's own PIN, so this mirrors it.
 ///
@@ -10,8 +20,8 @@ struct PasscodeEntry<Footer: View>: View {
     let title: String
     var message: String?
     var length: Int?
-    /// Called with the digits. Return false to shake, buzz and clear (a wrong PIN, a mismatch).
-    let submit: (String) -> Bool
+    /// Called with the digits once they're all in.
+    let submit: (String) -> PasscodeResult
     @ViewBuilder var footer: Footer
 
     @State private var code = ""
@@ -42,7 +52,19 @@ struct PasscodeEntry<Footer: View>: View {
                 .padding(.horizontal, 28)
             Spacer(minLength: 12)
         }
-        .sensoryFeedback(.error, trigger: shakes)
+    }
+
+    /// UIKit generators rather than .sensoryFeedback: the success buzz has to play even though
+    /// the screen is dismissed in the same moment.
+    @MainActor private enum Haptics {
+        static func key() { UIImpactFeedbackGenerator(style: .light).impactOccurred() }
+        static func result(_ result: PasscodeResult) {
+            switch result {
+            case .accepted: UINotificationFeedbackGenerator().notificationOccurred(.success)
+            case .next: UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+            case .rejected: UINotificationFeedbackGenerator().notificationOccurred(.error)
+            }
+        }
     }
 
     private var dots: some View {
@@ -97,7 +119,10 @@ struct PasscodeEntry<Footer: View>: View {
             .buttonStyle(KeyStyle())
             .accessibilityLabel("\(n)")
         case .delete:
-            Button { code.removeLast() } label: {
+            Button {
+                code.removeLast()
+                Haptics.key()
+            } label: {
                 Text("Delete").font(.body).frame(width: 78, height: 78)
             }
             .buttonStyle(.plain)
@@ -114,6 +139,7 @@ struct PasscodeEntry<Footer: View>: View {
     private func type(_ n: Int) {
         guard code.count < maxLength else { return }
         code.append(String(n))
+        Haptics.key()
         if let length, code.count == length {
             // Let the last dot fill before the screen reacts.
             Task { @MainActor in
@@ -125,7 +151,9 @@ struct PasscodeEntry<Footer: View>: View {
 
     private func finish() {
         let entered = code
-        if !submit(entered) {
+        let result = submit(entered)
+        Haptics.result(result)
+        if result == .rejected {
             withAnimation(.default) { shakes += 1 }
         }
         code = ""

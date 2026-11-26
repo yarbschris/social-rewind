@@ -91,20 +91,20 @@ private struct PinSetupView: View {
         message = nil
     }
 
-    private func submit(_ code: String) -> Bool {
+    private func submit(_ code: String) -> PasscodeResult {
         guard let first else {
             self.first = code
             message = nil
-            return true
+            return .next
         }
         guard code == first else {
             self.first = nil
             message = "The PINs didn't match. Try again."
-            return false
+            return .rejected
         }
         model.setPin(code)
         dismiss()
-        return true
+        return .accepted
     }
 }
 
@@ -145,16 +145,16 @@ struct PinPromptView: View {
         }
     }
 
-    private func submit(_ pin: String) -> Bool {
+    private func submit(_ pin: String) -> PasscodeResult {
         switch model.enterPin(pin) {
         case .correct:
             dismiss()
-            return true
+            return .accepted
         case .wrong(let left):
             message = left == 1 ? "Wrong PIN. 1 try left before a pause." : "Wrong PIN. \(left) tries left before a pause."
         case .paused(let until):
             message = "Too many tries. Try again \(until.formatted(.relative(presentation: .named)))."
         }
-        return false
+        return .rejected
     }
 }

@@ -73,6 +73,8 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: $(SR_BUNDLE_PREFIX)
+        # iPhone only. XcodeGen's per-target default ("1,2") would otherwise override the project setting.
+        TARGETED_DEVICE_FAMILY: "1"
         PRODUCT_NAME: SocialRewind
         # The engine build script reads ../engine and ../rules, so Xcode's script sandbox must be off.
         ENABLE_USER_SCRIPT_SANDBOXING: NO
@@ -106,6 +108,7 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: $(SR_BUNDLE_PREFIX).ShieldConfiguration
+        TARGETED_DEVICE_FAMILY: "1"
 
   ShieldAction:
     type: app-extension
@@ -135,6 +138,7 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: $(SR_BUNDLE_PREFIX).ShieldAction
+        TARGETED_DEVICE_FAMILY: "1"
 
   DeviceActivityMonitor:
     type: app-extension
@@ -164,6 +168,7 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: $(SR_BUNDLE_PREFIX).DeviceActivityMonitor
+        TARGETED_DEVICE_FAMILY: "1"
 
 schemes:
   SocialRewind:

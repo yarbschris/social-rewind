@@ -178,6 +178,12 @@ export interface CounterDef {
   item: string;
   /** How to derive a stable key for de-duplication. */
   key: { selector: string; attr: string; pattern?: string };
+  /**
+   * Regexes on the pathname of single-post pages. Staying on a matching page for `minVisibleMs`
+   * counts it, keyed by the first capture group, which must match the `key.pattern` capture so
+   * the same post isn't counted twice.
+   */
+  routes?: string[];
   minVisibleRatio?: number; // default 0.5
   minVisibleMs?: number; // default 1000
 }

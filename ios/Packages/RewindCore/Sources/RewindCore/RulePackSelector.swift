@@ -57,6 +57,12 @@ public enum RulePackSelector {
         regexes += ruleSets.flatMap { ($0.routes ?? []).map(\.pattern) }
         regexes += ruleSets.flatMap { ($0.network ?? []).compactMap { $0.stringValue(at: "url") } }
         regexes += [pack.counter?.stringValue(at: "key", "pattern"), pack.identity?.stringValue(at: "pattern")].compactMap { $0 }
+        if case .object(let counter)? = pack.counter, case .array(let routes)? = counter["routes"] {
+            regexes += routes.compactMap { value -> String? in
+                if case .string(let pattern) = value { return pattern }
+                return nil
+            }
+        }
         for regex in regexes where regex.count > maxRegexLength { throw .regexTooLong(String(regex.prefix(40))) }
     }
 

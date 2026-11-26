@@ -23,6 +23,7 @@ describe.each(packs)("rule pack %s", (_file, pack) => {
         ...(f.rules.network ?? []).map((r) => r.url),
       ]),
       ...Object.values(pack.modes ?? {}).flatMap((m) => m.allowRoutes),
+      ...(pack.counter?.routes ?? []),
     ];
     for (const r of regexes) expect(() => new RegExp(r), r).not.toThrow();
   });

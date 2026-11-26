@@ -192,6 +192,56 @@ function labRuntime(config, KNOWN_SEGMENTS) {
       console.log(lines.join("\n") + (lines.length >= max ? `\n… (stopped at ${max} lines)` : ""));
       return lines.length;
     },
+    /**
+     * What the post counter can see right now: articles, post and reel links, and videos. Use it
+     * on a view that should count but doesn't, such as a post or reel opened from DMs.
+     */
+    posts() {
+      const def = pack.counter;
+      const keyLinks = 'a[href*="/p/"], a[href*="/reel/"]';
+      const onScreen = (el) => {
+        const r = el.getBoundingClientRect();
+        return r.width > 0 && r.height > 0 && r.bottom > 0 && r.top < innerHeight;
+      };
+      const arts = [...document.querySelectorAll("article")];
+      const links = [...document.querySelectorAll(keyLinks)];
+      const videos = [...document.querySelectorAll("video")];
+      console.log(
+        "%cSocial Rewind lab: post counter",
+        "font-weight:bold",
+        `\n  path: ${hrefPattern(location.pathname)}` +
+          `\n  posts counted: ${window.SocialRewind?.postsViewed?.() ?? "n/a"}` +
+          `\n  counter items (${def?.item ?? "none"}): ${def ? count(def.item) : 0}` +
+          `\n  articles: ${arts.length}, with a post/reel link: ${arts.filter((a) => a.querySelector(keyLinks)).length}, on screen: ${arts.filter(onScreen).length}` +
+          `\n  post/reel links: ${links.length}, on screen: ${links.filter(onScreen).length}` +
+          `\n  videos: ${videos.length}, on screen: ${videos.filter(onScreen).length}` +
+          `\n  dialogs: ${count('[role="dialog"]')}`,
+      );
+      const rows = links.slice(0, 10).map((a) => ({
+        href: hrefPattern(a.getAttribute("href") ?? ""),
+        onScreen: onScreen(a),
+        inArticle: !!a.closest("article"),
+        inDialog: !!a.closest('[role="dialog"]'),
+        hidden: !!a.closest("[data-sr-hidden]"),
+      }));
+      if (rows.length) console.table(rows);
+      // For the first on-screen video: the nearest ancestor that also holds a post/reel link.
+      const video = videos.find(onScreen);
+      if (video) {
+        let e = video.parentElement;
+        let up = 1;
+        while (e && e !== document.body && !e.querySelector(keyLinks)) {
+          e = e.parentElement;
+          up++;
+        }
+        console.log(
+          e && e !== document.body
+            ? `[Social Rewind lab] on-screen video: a post/reel link is ${up} level(s) up, in ${describe(e)}`
+            : "[Social Rewind lab] on-screen video: no post/reel link anywhere above it",
+        );
+      }
+      return rows;
+    },
     /** The last `n` feed posts: which are hidden, and by which rule. */
     feedTail(n = 8) {
       const arts = [...document.querySelectorAll("article")];

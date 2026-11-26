@@ -59,6 +59,26 @@ describe("page → isolated events", () => {
   });
 });
 
+describe("post counter", () => {
+  it("counts a post page reached by in-app navigation", async () => {
+    const events: BridgeEvent[] = [];
+    const off = onSend((e) => events.push(e));
+    const timers: Array<() => void> = [];
+    const api = startIsolated(config(), {
+      counter: { setTimeout: (fn: () => void) => timers.push(fn), clearTimeout: () => {} },
+    });
+    history.pushState(null, "", "/p/QQQ/");
+    document.documentElement.setAttribute("data-sr-path", "/p/QQQ/");
+    await flush();
+    timers.forEach((fn) => fn());
+    expect(events).toContainEqual({ type: "postViewed", key: "QQQ", sessionCount: 1 });
+    expect(api?.postsViewed()).toBe(1);
+    api?.stop();
+    history.pushState(null, "", "/");
+    off();
+  });
+});
+
 describe("platform hosts", () => {
   it("acts only on the platform's own hosts", () => {
     const c = config({ hosts: ["instagram.com", "www.instagram.com"] });

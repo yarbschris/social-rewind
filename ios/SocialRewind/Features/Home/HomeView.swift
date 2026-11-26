@@ -16,6 +16,12 @@ struct HomeView: View {
                 }
 
                 Section {
+                    NavigationLink { SettingsPinView() } label: {
+                        LabeledContent("Settings PIN", value: model.settingsPin == nil ? "Off" : "On")
+                    }
+                }
+
+                Section {
                     EmptyView()
                 } footer: {
                     let later = Platform.allCases.filter { !$0.isAvailable }.map(\.displayName)

@@ -19,6 +19,7 @@ struct SocialRewindApp: App {
 
 struct RootView: View {
     @Environment(AppModel.self) private var model
+    @Environment(\.scenePhase) private var scenePhase
     #if DEBUG
     @State private var debugScreen = DebugScreen.requested
     #endif
@@ -38,10 +39,24 @@ struct RootView: View {
     }
 
     @ViewBuilder private var main: some View {
-        if model.onboardingComplete {
-            HomeView()
-        } else {
-            OnboardingView()
+        @Bindable var model = model
+        Group {
+            if model.onboardingComplete {
+                HomeView()
+            } else {
+                OnboardingView()
+            }
+        }
+        // Any screen can hold back a loosening change for the settings PIN.
+        .sheet(item: $model.pinPrompt) { prompt in
+            PinPromptView(prompt: prompt)
+        }
+        .onChange(of: scenePhase) { _, phase in
+            switch phase {
+            case .active: model.applyDuePinReset()
+            case .background: model.lockSettings()
+            default: break
+            }
         }
     }
 }

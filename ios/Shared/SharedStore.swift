@@ -28,6 +28,7 @@ final class SharedStore {
         static let developer = "developer"
         static let stats = "stats"
         static let lastRuleRefresh = "lastRuleRefresh"
+        static let settingsPin = "settingsPin"
         static func settings(_ p: Platform) -> String { "settings.\(p.rawValue)" }
         static func selection(_ p: Platform) -> String { "selection.\(p.rawValue)" }
         static func locked(_ p: Platform) -> String { "locked.\(p.rawValue)" }
@@ -68,6 +69,15 @@ final class SharedStore {
     var lastRuleRefresh: Date? {
         get { defaults.object(forKey: Key.lastRuleRefresh) as? Date }
         set { defaults.set(newValue, forKey: Key.lastRuleRefresh) }
+    }
+
+    /// The optional PIN guarding changes that loosen restrictions (salted hash, never the PIN).
+    /// It lives here rather than in the Keychain on purpose: deleting the app should clear it.
+    var settingsPin: SettingsPin? {
+        get { load(Key.settingsPin) }
+        set {
+            if let newValue { save(newValue, Key.settingsPin) } else { defaults.removeObject(forKey: Key.settingsPin) }
+        }
     }
 
     // MARK: Stats

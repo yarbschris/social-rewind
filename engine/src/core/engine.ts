@@ -177,7 +177,11 @@ export function startIsolated(initial: EngineConfig, deps: IsolatedDeps = {}): P
   const eventObserver = new MutationObserver((records) => {
     for (const r of records) {
       if (r.attributeName === EVENT_ATTR) forward();
-      else if (r.attributeName === PATH_ATTR) dom?.pathChanged();
+      else if (r.attributeName === PATH_ATTR) {
+        dom?.pathChanged();
+        // The attribute is only a trigger from the page world; the path itself comes from location.
+        counter?.pathChanged(location.pathname);
+      }
     }
   });
   eventObserver.observe(html, { attributes: true, attributeFilter: [EVENT_ATTR, PATH_ATTR] });

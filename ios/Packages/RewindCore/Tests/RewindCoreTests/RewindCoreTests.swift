@@ -125,10 +125,10 @@ private func pack(revision: Int = 1, minEngine: Int = 1, platform: String = "ins
         _ = try RulePackSelector.validate(try instagramPackData(), platform: .instagram)
     }
 
-    private func packWith(features: String = "{}", modes: String = "{}", startPath: String = "/") -> Data {
+    private func packWith(features: String = "{}", modes: String = "{}", startPath: String = "/", counter: String? = nil) -> Data {
         Data("""
         {"schemaVersion":1,"platform":"instagram","revision":9,"minEngineVersion":1,"startPath":"\(startPath)",
-         "features":\(features),"modes":\(modes)}
+         "features":\(features),"modes":\(modes)\(counter.map { ",\"counter\":\($0)" } ?? "")}
         """.utf8)
     }
 
@@ -163,6 +163,13 @@ private func pack(revision: Int = 1, minEngine: Int = 1, platform: String = "ins
         #expect(throws: RulePackSelector.RejectionReason.self) {
             try RulePackSelector.validate(packWith(features: longNet), platform: .instagram)
         }
+
+        let longCounter = #"{"item":"article","key":{"selector":"a","attr":"href"},"routes":["\#(longRegex)"]}"#
+        #expect(throws: RulePackSelector.RejectionReason.self) {
+            try RulePackSelector.validate(packWith(counter: longCounter), platform: .instagram)
+        }
+        let okCounter = #"{"item":"article","key":{"selector":"a","attr":"href"},"routes":["^/p/([^/]+)/?$"]}"#
+        #expect(throws: Never.self) { try RulePackSelector.validate(packWith(counter: okCounter), platform: .instagram) }
 
         let huge = Data(repeating: 0x20, count: RulePackSelector.maxPackBytes) + packWith()
         #expect(throws: RulePackSelector.RejectionReason.tooLarge(bytes: huge.count)) {

@@ -1,5 +1,5 @@
 import { onSend } from "../src/core/bridge";
-import { installCounter, keyFor } from "../src/core/counter";
+import { installCounter, keyFor, routeKeyFor } from "../src/core/counter";
 import type { BridgeEvent } from "../src/core/types";
 import { FakeIO, loadPack } from "./helpers";
 
@@ -69,5 +69,61 @@ describe("post counter", () => {
     FakeIO.instances[0]!.fire(el("c"), 1);
     runTimers();
     expect(c.count()).toBe(0);
+  });
+
+  describe("post and reel pages", () => {
+    const routes = (def.routes ?? []).map((r) => new RegExp(r));
+
+    it("keys single-post paths the same way as feed links", () => {
+      expect(routeKeyFor("/p/AAA/", routes)).toBe("AAA");
+      expect(routeKeyFor("/reel/BBB/", routes)).toBe("BBB");
+      expect(routeKeyFor("/someone/p/CCC/", routes)).toBe("CCC");
+      expect(routeKeyFor("/someone/reel/DDD", routes)).toBe("DDD");
+      for (const path of ["/", "/direct/inbox/", "/direct/t/123/", "/reels/", "/reels/EEE/", "/p/AAA/liked_by/", "/someone/", "/someone/saved/"]) {
+        expect(routeKeyFor(path, routes), path).toBeNull();
+      }
+    });
+
+    it("counts a post page the user stays on, e.g. one opened from DMs", () => {
+      const c = installCounter(def, deps(), "/direct/t/123/");
+      c.pathChanged("/p/ZZZ/");
+      runTimers();
+      expect(c.count()).toBe(1);
+      expect(counted()).toEqual([{ type: "postViewed", key: "ZZZ", sessionCount: 1 }]);
+    });
+
+    it("counts the page it starts on", () => {
+      const c = installCounter(def, deps(), "/reel/YYY/");
+      runTimers();
+      expect(c.count()).toBe(1);
+    });
+
+    it("doesn't count a page left before the delay", () => {
+      const c = installCounter(def, deps(), "/direct/t/123/");
+      c.pathChanged("/p/ZZZ/");
+      c.pathChanged("/direct/t/123/");
+      runTimers();
+      expect(c.count()).toBe(0);
+    });
+
+    it("doesn't count a post twice when its page and its feed article are both seen", () => {
+      const c = installCounter(def, deps(), "/");
+      FakeIO.instances[0]!.fire(el("a"), 1);
+      runTimers();
+      c.pathChanged("/p/AAA/");
+      runTimers();
+      c.pathChanged("/");
+      c.pathChanged("/p/AAA/");
+      runTimers();
+      expect(c.count()).toBe(1);
+      expect(counted()).toHaveLength(1);
+    });
+
+    it("stops pending page timers on uninstall", () => {
+      const c = installCounter(def, deps(), "/p/ZZZ/");
+      c.uninstall();
+      runTimers();
+      expect(c.count()).toBe(0);
+    });
   });
 });

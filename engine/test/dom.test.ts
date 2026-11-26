@@ -339,6 +339,21 @@ describe("rev 16: stories row takes its wrappers with it", () => {
     await flush();
     expect([...document.querySelectorAll(`[${HIDDEN_ATTR}]`)].map((e) => e.id)).toEqual(["w5"]);
   });
+
+  it("rev 21: hides a profile's highlights strip with its wrappers, not the posts grid", async () => {
+    document.documentElement.innerHTML = "<head></head><body></body>";
+    const rules = compile(config({ settings: settings({ features: { hideStories: true } }) }));
+    dom = installDom(() => rules, { debug: false, grayscale: false });
+    const highlight = (n: number) => `<li><div><a href="/stories/highlights/${n}/"><img alt=""><span>title</span></a></div></li>`;
+    document.body.innerHTML =
+      `<main><div id="profile"><header id="header">bio</header>` +
+      `<div id="strip"><div><ul id="tray">${highlight(1)}${highlight(2)}${highlight(3)}</ul></div></div>` +
+      '<div id="grid"><a href="/p/A/">post</a><a href="/p/B/">post</a></div></div></main>';
+    await flush();
+    expect([...document.querySelectorAll(`[${HIDDEN_ATTR}]`)].map((e) => e.id)).toEqual(["strip"]);
+    const css = rules.css.find((c) => c.id === "hideStories.css2")!.rule;
+    expect([...document.querySelectorAll(css)].map((e) => e.id)).toEqual(["tray"]);
+  });
 });
 
 describe("rev 17: notes row takes its wrappers with it", () => {

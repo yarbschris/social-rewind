@@ -4,6 +4,8 @@ import { send } from "./bridge";
 
 export interface CounterHandle {
   scan(root: ParentNode): void;
+  /** Call after every navigation: a post or reel page counts once the user stays on it. */
+  pathChanged(path: string): void;
   count(): number;
   uninstall(): void;
 }
@@ -31,8 +33,21 @@ export function keyFor(el: Element, def: CounterDef): string | null {
   }
 }
 
-/** Count each unique post once it has been at least `minVisibleRatio` visible for `minVisibleMs`. */
-export function installCounter(def: CounterDef, deps: CounterDeps = {}): CounterHandle {
+/** The key for a single-post page, from the first `routes` pattern that matches the path. */
+export function routeKeyFor(path: string, routes: RegExp[]): string | null {
+  for (const re of routes) {
+    const m = re.exec(path);
+    if (m) return m[1] ?? m[0];
+  }
+  return null;
+}
+
+/**
+ * Count each unique post once it has been at least `minVisibleRatio` visible for `minVisibleMs`,
+ * and each post or reel page (`routes`) the user stays on for `minVisibleMs`. A post opened from
+ * DMs, Saved or a profile is its own page, often without a feed-style article to observe.
+ */
+export function installCounter(def: CounterDef, deps: CounterDeps = {}, initialPath = location.pathname): CounterHandle {
   const IO = deps.IntersectionObserver ?? globalThis.IntersectionObserver;
   const setT = deps.setTimeout ?? ((fn, ms) => globalThis.setTimeout(fn, ms));
   const clearT = deps.clearTimeout ?? ((h) => globalThis.clearTimeout(h as number));
@@ -43,16 +58,50 @@ export function installCounter(def: CounterDef, deps: CounterDeps = {}): Counter
   const observed = new WeakSet<Element>();
   const timers = new Map<Element, unknown>();
 
-  const commit = (el: Element) => {
-    if (!el.isConnected || el.closest(`[${HIDDEN_ATTR}]`)) return;
-    const key = keyFor(el, def);
-    if (!key || seen.has(key)) return;
+  const record = (key: string) => {
+    if (seen.has(key)) return;
     seen.add(key);
     send({ type: "postViewed", key, sessionCount: seen.size });
   };
 
+  const commit = (el: Element) => {
+    if (!el.isConnected || el.closest(`[${HIDDEN_ATTR}]`)) return;
+    const key = keyFor(el, def);
+    if (key) record(key);
+  };
+
+  const routes: RegExp[] = [];
+  for (const pattern of def.routes ?? []) {
+    try {
+      routes.push(new RegExp(pattern));
+    } catch {
+      // An invalid pattern counts nothing; the schema and tests catch it before release.
+    }
+  }
+  let currentPath: string | null = null;
+  let routeTimer: unknown;
+  const pathChanged = (path: string) => {
+    if (path === currentPath) return;
+    currentPath = path;
+    if (routeTimer !== undefined) {
+      clearT(routeTimer);
+      routeTimer = undefined;
+    }
+    const key = routeKeyFor(path, routes);
+    if (!key || seen.has(key)) return;
+    routeTimer = setT(() => {
+      routeTimer = undefined;
+      if (currentPath === path) record(key);
+    }, ms);
+  };
+  pathChanged(initialPath);
+  const stopRouteTimer = () => {
+    if (routeTimer !== undefined) clearT(routeTimer);
+    routeTimer = undefined;
+  };
+
   if (typeof IO !== "function") {
-    return { scan() {}, count: () => seen.size, uninstall() {} };
+    return { scan() {}, pathChanged, count: () => seen.size, uninstall: stopRouteTimer };
   }
 
   const io = new IO(
@@ -100,8 +149,10 @@ export function installCounter(def: CounterDef, deps: CounterDeps = {}): Counter
 
   return {
     scan,
+    pathChanged,
     count: () => seen.size,
     uninstall() {
+      stopRouteTimer();
       mo.disconnect();
       io.disconnect();
       for (const t of timers.values()) clearT(t);

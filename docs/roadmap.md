@@ -38,6 +38,8 @@ Reddit → X → LinkedIn → Facebook → Snapchat (web is chat-only; may not w
 No Screen Time equivalent. Options are an AccessibilityService (strict Google Play policy) or UsageStats plus an overlay. The engine and rule packs carry over unchanged.
 
 ## Later features
+**Painless sign-in** (next): sign in before locking, a coach for each kind of Meta login check, a code-based backup method, and session health. See [plans/painless-sign-in.md](plans/painless-sign-in.md).
+
 Sleep mode, time limits (DeviceActivity), weekly on-device stats.
 
 Idea: **Threads support** (threads.com) as its own platform, instead of only hiding Instagram's link to it.

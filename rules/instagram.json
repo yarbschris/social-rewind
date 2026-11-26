@@ -2,7 +2,7 @@
   "$schema": "./schema/rule-pack.schema.json",
   "schemaVersion": 1,
   "platform": "instagram",
-  "revision": 20,
+  "revision": 21,
   "minEngineVersion": 2,
   "startPath": "/",
   "alwaysAllowRoutes": [
@@ -130,7 +130,8 @@
       "rules": {
         "css": [
           "div:has(> div[role=\"button\"][aria-label^=\"Story by\"]:nth-child(2))",
-          "a[href^=\"/stories/\"]"
+          "a[href^=\"/stories/\"]",
+          "ul:has(a[href^=\"/stories/highlights/\"])"
         ],
         "routes": [
           {
@@ -144,6 +145,12 @@
             "type": "hideClosest",
             "match": "div:has(> div[role=\"button\"][aria-label^=\"Story by\"]:nth-child(2))",
             "closest": "div",
+            "withWrappers": true
+          },
+          {
+            "type": "hideClosest",
+            "match": "a[href^=\"/stories/highlights/\"]",
+            "closest": "ul",
             "withWrappers": true
           }
         ]

@@ -25,11 +25,18 @@ final class AppModel {
     /// The platform shown full screen in a filtered browser.
     var openPlatform: Platform?
 
+    /// Optional PIN for changes that loosen restrictions. nil = off.
+    private(set) var settingsPin: SettingsPin?
+    /// A loosening change waiting for the PIN. RootView presents it.
+    var pinPrompt: PinPrompt?
+    @ObservationIgnored private var unlockedUntil: Date?
+
     var onboardingComplete: Bool {
         didSet { store.onboardingComplete = onboardingComplete }
     }
 
-    var reminders: ReminderSettings {
+    /// Change through `setReminders`, which asks for the PIN when a change loosens them.
+    private(set) var reminders: ReminderSettings {
         didSet { store.reminders = reminders }
     }
 
@@ -46,6 +53,7 @@ final class AppModel {
         onboardingComplete = store.onboardingComplete
         reminders = store.reminders
         developer = store.developer
+        settingsPin = store.settingsPin
         stats = store.stats
         lastRuleRefresh = store.lastRuleRefresh
         for platform in Platform.allCases where platform.isAvailable {
@@ -59,6 +67,7 @@ final class AppModel {
             selections[platform] = store.selection(for: platform)
             if store.isLocked(platform) { lockedPlatforms.insert(platform) }
         }
+        applyDuePinReset()
     }
 
     // MARK: Settings
@@ -71,11 +80,105 @@ final class AppModel {
         return PlatformSettings()
     }
 
+    /// Applies the change, or holds it for the PIN if it loosens a restriction.
     func updateSettings(for platform: Platform, _ mutate: (inout PlatformSettings) -> Void) {
-        var s = settings(for: platform)
-        mutate(&s)
-        settings[platform] = s
-        store.setSettings(s, for: platform)
+        let old = settings(for: platform)
+        var new = old
+        mutate(&new)
+        guard new != old else { return }
+        let loosens = rulePacks[platform].map { Loosening.platformSettings(from: old, to: new, pack: $0.pack) } ?? true
+        guarded(loosens: loosens, "Loosening \(platform.displayName)'s filters needs your settings PIN.",
+                undo: { $0.settings[platform] = old }) { model in
+            model.settings[platform] = new
+            model.store.setSettings(new, for: platform)
+        }
+    }
+
+    func setReminders(_ new: ReminderSettings) {
+        let old = reminders
+        guard new != old else { return }
+        guarded(loosens: Loosening.reminders(from: old, to: new), "Making reminders less frequent needs your settings PIN.",
+                undo: { $0.reminders = old }) { $0.reminders = new }
+    }
+
+    // MARK: Settings PIN
+
+    /// True when there's no PIN, or it was entered in the last few minutes.
+    var settingsUnlocked: Bool {
+        guard settingsPin != nil else { return true }
+        return unlockedUntil.map { $0 > .now } ?? false
+    }
+
+    /// Runs `action` now unless it loosens a restriction while a PIN is set; then it waits for
+    /// the PIN. `undo` re-assigns the current value so a control the user flipped snaps back.
+    func guarded(loosens: Bool, _ reason: String,
+                 undo: ((AppModel) -> Void)? = nil, _ action: @escaping (AppModel) -> Void) {
+        if !loosens || settingsUnlocked {
+            action(self)
+        } else {
+            undo?(self)
+            pinPrompt = PinPrompt(reason: reason) { [weak self] in if let self { action(self) } }
+        }
+    }
+
+    /// Checks the PIN for the pending prompt; on success, unlocks for a few minutes and runs it.
+    func enterPin(_ pin: String) -> SettingsPin.Attempt {
+        guard var lock = settingsPin else { return .correct }
+        let result = lock.attempt(pin)
+        settingsPin = lock
+        store.settingsPin = lock
+        if result == .correct {
+            unlockedUntil = Date.now.addingTimeInterval(SettingsPin.unlockDuration)
+            let action = pinPrompt?.action
+            pinPrompt = nil
+            action?()
+        }
+        return result
+    }
+
+    /// Turns the PIN on, or changes it. Changing an existing PIN goes through `guarded` first.
+    @discardableResult
+    func setPin(_ pin: String) -> Bool {
+        guard let lock = SettingsPin(pin: pin) else { return false }
+        settingsPin = lock
+        store.settingsPin = lock
+        unlockedUntil = nil
+        return true
+    }
+
+    func removePin() {
+        guarded(loosens: true, "Turning off the settings PIN needs the PIN.") { model in
+            model.settingsPin = nil
+            model.store.settingsPin = nil
+            model.unlockedUntil = nil
+        }
+    }
+
+    func requestPinReset() {
+        guard var lock = settingsPin else { return }
+        lock.requestReset()
+        settingsPin = lock
+        store.settingsPin = lock
+    }
+
+    func cancelPinReset() {
+        guard var lock = settingsPin else { return }
+        lock.cancelReset()
+        settingsPin = lock
+        store.settingsPin = lock
+    }
+
+    /// "Forgot PIN" removes the PIN once its waiting period has passed. Checked at launch and on
+    /// returning to the app.
+    func applyDuePinReset() {
+        guard settingsPin?.resetIsDue() == true else { return }
+        settingsPin = nil
+        store.settingsPin = nil
+    }
+
+    /// Leaving the app locks settings again.
+    func lockSettings() {
+        unlockedUntil = nil
     }
 
     func username(for platform: Platform) -> String? { usernames[platform] }
@@ -166,16 +269,26 @@ final class AppModel {
 
     // MARK: Screen Time
 
+    /// Picking an app where none was picked is stricter; swapping one out could unlock it.
     func setSelection(_ selection: FamilyActivitySelection, for platform: Platform) {
-        selections[platform] = selection
-        store.setSelection(selection, for: platform)
-        applyShields()
+        let old = selections[platform]
+        let loosens = !(old?.applicationTokens.isEmpty ?? true) && old != selection
+        guarded(loosens: loosens, "Changing which app is locked needs your settings PIN.",
+                undo: { $0.selections[platform] = old }) { model in
+            model.selections[platform] = selection
+            model.store.setSelection(selection, for: platform)
+            model.applyShields()
+        }
     }
 
     func setLocked(_ locked: Bool, for platform: Platform) {
-        if locked { lockedPlatforms.insert(platform) } else { lockedPlatforms.remove(platform) }
-        store.setLocked(locked, for: platform)
-        applyShields()
+        let wasLocked = lockedPlatforms.contains(platform)
+        guarded(loosens: wasLocked && !locked, "Unlocking \(platform.displayName) needs your settings PIN.",
+                undo: { $0.lockedPlatforms = $0.lockedPlatforms }) { model in
+            if locked { model.lockedPlatforms.insert(platform) } else { model.lockedPlatforms.remove(platform) }
+            model.store.setLocked(locked, for: platform)
+            model.applyShields()
+        }
     }
 
     func applyShields() {
@@ -204,4 +317,11 @@ final class AppModel {
         store.lastRuleRefresh = lastRuleRefresh
         ruleRefreshStatus = messages.joined(separator: "\n")
     }
+}
+
+/// A loosening change held until the settings PIN is entered.
+struct PinPrompt: Identifiable {
+    let id = UUID()
+    let reason: String
+    let action: @MainActor () -> Void
 }

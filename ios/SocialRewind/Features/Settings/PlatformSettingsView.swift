@@ -146,14 +146,25 @@ private struct ReminderControls: View {
     @Environment(AppModel.self) private var model
 
     var body: some View {
-        @Bindable var model = model
-        Toggle("Scroll reminders", isOn: $model.reminders.enabled)
+        Toggle("Scroll reminders", isOn: reminder(\.enabled))
         if model.reminders.enabled {
             Stepper(model.reminders.everyPosts == 0 ? "No post reminder" : "Every \(model.reminders.everyPosts) posts",
-                    value: $model.reminders.everyPosts, in: 0...500, step: 10)
+                    value: reminder(\.everyPosts), in: 0...500, step: 10)
             Stepper(model.reminders.everyMinutes == 0 ? "No time reminder" : "Every \(model.reminders.everyMinutes) minutes",
-                    value: $model.reminders.everyMinutes, in: 0...120, step: 5)
+                    value: reminder(\.everyMinutes), in: 0...120, step: 5)
         }
+    }
+
+    /// Goes through `setReminders`, so making reminders less frequent asks for the PIN.
+    private func reminder<T>(_ keyPath: WritableKeyPath<ReminderSettings, T>) -> Binding<T> {
+        Binding(
+            get: { model.reminders[keyPath: keyPath] },
+            set: { value in
+                var new = model.reminders
+                new[keyPath: keyPath] = value
+                model.setReminders(new)
+            }
+        )
     }
 }
 

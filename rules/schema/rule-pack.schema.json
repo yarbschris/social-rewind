@@ -320,6 +320,9 @@
         "pattern": {
           "$ref": "#/$defs/regex"
         },
+        "search": {
+          "$ref": "#/$defs/regex"
+        },
         "action": {
           "enum": [
             "block",
@@ -329,6 +332,9 @@
         "to": {
           "type": "string",
           "pattern": "^/(?![/\\\\])(?!.*\\\\)(?!.*://)"
+        },
+        "navigateInApp": {
+          "type": "boolean"
         }
       },
       "if": {

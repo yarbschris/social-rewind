@@ -17,8 +17,10 @@ export interface Tagged<T> {
 export interface CompiledRoute {
   id: string;
   pattern: RegExp;
+  search?: RegExp;
   action: "block" | "redirect";
   to?: string;
+  navigateInApp?: boolean;
 }
 
 export interface CompiledNetwork {
@@ -85,7 +87,18 @@ export function compile(config: EngineConfig, onError: (msg: string) => void = (
     set.dom?.forEach((rule, i) => out.dom.push({ id: `${prefix}.dom${i}`, rule }));
     set.routes?.forEach((rule: RouteRule, i) => {
       const pattern = re(rule.pattern, onError);
-      if (pattern) out.routes.push({ id: `${prefix}.route${i}`, pattern, action: rule.action, to: rule.to });
+      // An invalid search pattern drops the whole rule: applying it to every query would be wrong.
+      const search = rule.search === undefined ? undefined : re(rule.search, onError);
+      if (pattern && search !== null) {
+        out.routes.push({
+          id: `${prefix}.route${i}`,
+          pattern,
+          ...(search ? { search } : {}),
+          action: rule.action,
+          to: rule.to,
+          ...(rule.navigateInApp ? { navigateInApp: true } : {}),
+        });
+      }
     });
     set.network?.forEach((rule: NetworkRule, i) => {
       if (rule.verified === false && !config.experimental) return;

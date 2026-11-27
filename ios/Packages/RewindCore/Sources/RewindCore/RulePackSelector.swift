@@ -55,6 +55,7 @@ public enum RulePackSelector {
         var regexes = pack.alwaysAllowRoutes ?? []
         regexes += (pack.modes ?? [:]).values.flatMap(\.allowRoutes)
         regexes += ruleSets.flatMap { ($0.routes ?? []).map(\.pattern) }
+        regexes += ruleSets.flatMap { ($0.routes ?? []).compactMap(\.search) }
         regexes += ruleSets.flatMap { ($0.network ?? []).compactMap { $0.stringValue(at: "url") } }
         regexes += [pack.counter?.stringValue(at: "key", "pattern"), pack.identity?.stringValue(at: "pattern")].compactMap { $0 }
         if case .object(let counter)? = pack.counter, case .array(let routes)? = counter["routes"] {

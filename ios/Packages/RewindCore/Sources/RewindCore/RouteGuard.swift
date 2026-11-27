@@ -32,11 +32,31 @@ public struct RouteGuard: Sendable {
         return def.home.replacingOccurrences(of: "{username}", with: username)
     }
 
-    /// Where to go when a path is disallowed: the mode's home, else the pack's start path.
-    public var fallback: String { modeHome ?? pack.startPath }
+    /// Where to go when a path is disallowed: the same place the browser opens.
+    public var fallback: String { startPath }
 
-    public func evaluate(path rawPath: String) -> Decision {
+    /// Where the browser opens: the mode's home, else where an active redirect rule sends the
+    /// pack's start path (e.g. Instagram's Following feed), so the first load isn't redirected
+    /// straight away. Only literal targets count; the engine handles the rest.
+    public var startPath: String {
+        if let modeHome { return modeHome }
+        if settings.effectiveMode(for: pack) != PlatformSettings.normalMode { return pack.startPath }
+        let enabled = settings.effectiveFeatures(for: pack)
+        for id in pack.features.keys.sorted() where enabled[id] == true {
+            for rule in pack.features[id]?.rules.routes ?? [] where rule.action == .redirect {
+                guard let to = rule.to, !to.contains("$"), RulePackSelector.isSameOriginPath(to),
+                      Self.matches(rule.pattern, pack.startPath),
+                      rule.search.map({ Self.matches($0, "") }) ?? true else { continue }
+                return to
+            }
+        }
+        return pack.startPath
+    }
+
+    /// `query` is the URL's query without the "?", as `URL.query` gives it.
+    public func evaluate(path rawPath: String, query: String? = nil) -> Decision {
         let path = rawPath.isEmpty ? "/" : rawPath
+        let search = query.map { "?" + $0 } ?? ""
 
         if matchesAny(pack.alwaysAllowRoutes ?? [], path) { return .allow }
 
@@ -52,7 +72,8 @@ public struct RouteGuard: Sendable {
             }
         }
 
-        for rule in activeBlockRules where Self.matches(rule.pattern, path) {
+        for rule in activeBlockRules where Self.matches(rule.pattern, path)
+            && (rule.search.map { Self.matches($0, search) } ?? true) {
             return redirect(from: path, to: fallback)
         }
         return .allow

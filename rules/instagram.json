@@ -2,8 +2,8 @@
   "$schema": "./schema/rule-pack.schema.json",
   "schemaVersion": 1,
   "platform": "instagram",
-  "revision": 23,
-  "minEngineVersion": 3,
+  "revision": 24,
+  "minEngineVersion": 4,
   "startPath": "/",
   "alwaysAllowRoutes": [
     "^/accounts/",
@@ -266,10 +266,19 @@
     },
     "hideSuggested": {
       "title": "Block suggested posts",
-      "description": "Hides posts and accounts from people you don't follow.",
+      "description": "Opens your Following feed (only accounts you follow, newest first) and hides posts and accounts from people you don't follow.",
       "group": "ads",
       "default": true,
       "rules": {
+        "routes": [
+          {
+            "pattern": "^/$",
+            "search": "^(?!.*[?&]variant=(?:following|favorites)(?:&|$))",
+            "action": "redirect",
+            "to": "/?variant=following",
+            "navigateInApp": true
+          }
+        ],
         "dom": [
           {
             "type": "hideIfText",

@@ -141,7 +141,7 @@ final class BrowserController {
             target = routeGuard.fallback
         } else if url.host?.lowercased() != platform.origin.host?.lowercased() {
             return // allowed auth/CDN host: platform routes don't apply
-        } else if case .navigate(let path) = routeGuard.evaluate(path: url.path) {
+        } else if case .navigate(let path) = routeGuard.evaluate(path: url.path, query: url.query) {
             target = path
         } else {
             return

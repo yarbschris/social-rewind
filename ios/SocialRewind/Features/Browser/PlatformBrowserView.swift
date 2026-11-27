@@ -70,7 +70,7 @@ struct PlatformBrowserView: View {
         // as it did when every open made a new web view.
         if case .failed = browser.filterState { session.tearDown() }
         if session.webView == nil {
-            let start = platform.startURL(startPath: model.routeGuard(for: platform)?.modeHome ?? pack.pack.startPath)
+            let start = platform.startURL(startPath: model.routeGuard(for: platform)?.startPath ?? pack.pack.startPath)
             webView = session.webView(startURL: start, scripts: scripts)
         } else {
             webView = session.webView

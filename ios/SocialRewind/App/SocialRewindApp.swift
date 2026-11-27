@@ -53,11 +53,17 @@ struct RootView: View {
         }
         .onChange(of: scenePhase) { _, phase in
             switch phase {
-            case .active: model.applyDuePinReset()
-            case .background: model.lockSettings()
-            default: break
+            case .active:
+                model.applyDuePinReset()
+                // Notification permission can change in iOS Settings while the app is in the background.
+                Task { await model.refreshNotificationPermission() }
+            case .background:
+                model.lockSettings()
+            default:
+                break
             }
         }
+        .task { await model.refreshNotificationPermission() }
     }
 }
 
@@ -85,15 +91,23 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         if let model { model.handle(url: url) } else { pendingURL = url }
     }
 
+    // Completion-handler versions, not the async ones: iOS may call these off the main thread, and
+    // the async bridging plus Swift 6's executor checks is a known crash. Each copies out what it
+    // needs, hops to the main actor itself, and calls the handler there.
     nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter,
-                                            didReceive response: UNNotificationResponse) async {
-        guard let string = response.notification.request.content.userInfo[NotificationKeys.url] as? String,
-              let url = URL(string: string) else { return }
-        await open(url)
+                                            didReceive response: UNNotificationResponse,
+                                            withCompletionHandler completionHandler: @escaping () -> Void) {
+        let link = (response.notification.request.content.userInfo[NotificationKeys.url] as? String).flatMap(URL.init(string:))
+        nonisolated(unsafe) let done = completionHandler
+        Task { @MainActor in
+            if let link { self.open(link) }
+            done()
+        }
     }
 
     nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter,
-                                            willPresent notification: UNNotification) async -> UNNotificationPresentationOptions {
-        [.banner]
+                                            willPresent notification: UNNotification,
+                                            withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
+        completionHandler([.banner])
     }
 }

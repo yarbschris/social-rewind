@@ -87,5 +87,5 @@ If `app.socialrewind` isn't registered to your team, set `SR_BUNDLE_PREFIX` in `
 | Type-check of all 15 app and Shared files (Swift 6 mode) | ✅ against the **Mac Catalyst** SDK (UIKit, SwiftUI, WebKit), with stand-in `FamilyControls`/`ManagedSettings` modules. Real Screen Time signatures weren't checked, and Catalyst availability is close to iOS but not identical. A negative control confirmed the check catches errors. |
 | The three extensions | ⚠️ parse only: ManagedSettingsUI and DeviceActivity aren't in the Catalyst SDK |
 | Shield → notification → deep-link handoff | ❓ roadmap spike 0.4 |
-| Async `UNUserNotificationCenterDelegate` methods in `AppDelegate` | ❓ check on the first device build |
+| `UNUserNotificationCenterDelegate` in `AppDelegate` | ❓ completion-handler versions since the first device build crashed on a notification tap with the async ones (cause unconfirmed) |
 | Whether shielding the web domain also blocks our WKWebView | ❓ spike 0.5, so web domains aren't shielded yet |

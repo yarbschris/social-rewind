@@ -381,10 +381,10 @@ describe("installRouter", () => {
       expect(events).toEqual([]);
     });
 
-    it("a Home link tapped on the Following feed does nothing", () => {
+    it("a link to / tapped on the Following feed is left to the site (the logo opens the feed menu)", () => {
       installHome();
       const ev = tap("/");
-      expect(ev.defaultPrevented).toBe(true);
+      expect(ev.defaultPrevented).toBe(false);
       expect(navs).toEqual([]);
       expect(backs).toBe(0);
       expect(events).toEqual([]);

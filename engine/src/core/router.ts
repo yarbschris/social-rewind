@@ -278,6 +278,10 @@ export function installRouter(getRules: () => ActiveRules, hooks: RouterHooks): 
     const { path } = loc;
     const d = evaluateRoute(path, getRules(), loc.search);
     if (d.action === "allow") return;
+    // Already where an in-app redirect would go (a link to "/" on the Following feed): leave the
+    // tap to the site. Instagram's logo is such a link and opens the Following/Favorites menu;
+    // if the site navigates to "/" instead, the pushState wrapper sends it back here.
+    if (d.action === "redirect" && d.navigateInApp && samePlace(here(), d.to)) return;
     // Inert: stay where the user is...
     e.preventDefault();
     e.stopImmediatePropagation();
@@ -286,9 +290,7 @@ export function installRouter(getRules: () => ActiveRules, hooks: RouterHooks): 
     // a thread's back button links to the other person's profile, and the inbox is
     // where "back" should land.
     if (d.action === "redirect" && d.byMode) leaveTo(d.to);
-    // A tap was stopped before the site saw it, so if we're already at the target there's
-    // nothing to fix: stay (e.g. Home on the Following feed).
-    else if (d.action === "redirect" && d.navigateInApp && !samePlace(here(), d.to)) leaveTo(d.to);
+    else if (d.action === "redirect" && d.navigateInApp) leaveTo(d.to);
   };
 
   addEventListener("popstate", onPop);

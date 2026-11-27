@@ -10,7 +10,7 @@ Instagram's main feed is mostly suggested posts and reels. With Block suggested 
 - Route rules gain two declarative fields (engine 4):
   - `search`: a regex the query must also match.
   - `navigateInApp`: follow the redirect on in-app navigation instead of staying put, so the Home button lands on Following. That's one step back if Following was the previous page, otherwise a load.
-- A tap on a Home link while already on Following is stopped and does nothing. An in-app address change to `/` reloads Following, because Instagram may already be rendering the main feed by then.
+- On Following, a tap on a link to `/` is left to the site: Instagram's logo is such a link and opens the Following/Favorites menu, and stopping it broke that menu (seen on device). An in-app address change to `/` reloads Following, because Instagram may already be rendering the main feed by then.
 - These redirects aren't reported as blocks, so the "Blocked by your settings" notice doesn't appear.
 - Redirect chains resolve in one navigation, for example Reels → `/` → Following.
 - Native opens the browser on the Following feed, and blocked pages fall back there.

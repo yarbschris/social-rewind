@@ -2,7 +2,7 @@
   "$schema": "./schema/rule-pack.schema.json",
   "schemaVersion": 1,
   "platform": "instagram",
-  "revision": 21,
+  "revision": 22,
   "minEngineVersion": 2,
   "startPath": "/",
   "alwaysAllowRoutes": [
@@ -410,7 +410,7 @@
       "attr": "href",
       "pattern": "/(?:p|reel)/([^/?#]+)"
     },
-    "routes": ["^/(?:[^/]+/)?(?:p|reel)/([^/?#]+)/?$"],
+    "routes": ["^/(?:[^/]+/)?(?:p|reel)/([^/?#]+)/?$", "^/stories/[^/]+/(\\d+)/?$"],
     "minVisibleRatio": 0.5,
     "minVisibleMs": 1000
   },

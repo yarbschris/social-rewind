@@ -364,13 +364,18 @@ final class AppModel {
     /// Asks for notification permission once an app is locked, if it was never asked (e.g. after
     /// onboarding on a build without Screen Time), then records whether it's allowed.
     func refreshNotificationPermission() async {
-        let center = UNUserNotificationCenter.current()
-        var status = await center.notificationSettings().authorizationStatus
+        var status = await Self.notificationStatus()
         if status == .notDetermined, hasActiveLocks, onboardingComplete {
-            _ = try? await center.requestAuthorization(options: [.alert, .sound])
-            status = await center.notificationSettings().authorizationStatus
+            _ = try? await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound])
+            status = await Self.notificationStatus()
         }
         notificationsAllowed = [.authorized, .provisional, .ephemeral].contains(status)
+    }
+
+    /// Off the main actor, so the non-Sendable `UNNotificationSettings` never crosses actors
+    /// (older SDKs reject that); only the Sendable status comes back.
+    private nonisolated static func notificationStatus() async -> UNAuthorizationStatus {
+        await UNUserNotificationCenter.current().notificationSettings().authorizationStatus
     }
 
     // MARK: Rule refresh (opt-in, docs/decisions/0002)

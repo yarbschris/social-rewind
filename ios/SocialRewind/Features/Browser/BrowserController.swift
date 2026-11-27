@@ -174,6 +174,9 @@ final class BrowserController {
         if reload {
             routeEnforcementDisabled = false
             forcedNavigationLimiter.reset()
+            // Cover the page now, not when WebKit reports the navigation: the page on screen
+            // still runs the old filters until the reload starts.
+            navigationStarted()
             webView.reload()
         } else if let liveUpdate {
             webView.evaluateJavaScript(liveUpdate, in: nil, in: InjectedScripts.isolatedWorld, completionHandler: nil)

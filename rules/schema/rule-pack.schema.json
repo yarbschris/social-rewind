@@ -274,6 +274,38 @@
               "type": "boolean"
             }
           }
+        },
+        {
+          "type": "object",
+          "required": [
+            "type",
+            "match",
+            "within"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "const": "hideBranch"
+            },
+            "match": {
+              "$ref": "#/$defs/selector"
+            },
+            "within": {
+              "$ref": "#/$defs/selector"
+            },
+            "keep": {
+              "$ref": "#/$defs/selector"
+            },
+            "when": {
+              "$ref": "#/$defs/selector"
+            },
+            "collapse": {
+              "type": "boolean"
+            },
+            "withWrappers": {
+              "type": "boolean"
+            }
+          }
         }
       ]
     },

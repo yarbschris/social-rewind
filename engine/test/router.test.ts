@@ -359,6 +359,7 @@ describe("installRouter", () => {
       history.replaceState(null, "", "/");
       installHome();
       expect(navs).toEqual(["https://www.instagram.com/?variant=following"]);
+      expect(events).toEqual([]); // not shown as "Blocked by your settings"
     });
 
     it("steps back to Following when you came from it", async () => {
@@ -368,6 +369,7 @@ describe("installRouter", () => {
       await new Promise((r) => setTimeout(r, 30));
       expect(backs).toBe(1);
       expect(navs).toEqual([]);
+      expect(events).toEqual([]);
     });
 
     it("loads Following when you didn't come from it", () => {
@@ -376,14 +378,30 @@ describe("installRouter", () => {
       tap("/");
       expect(backs).toBe(0);
       expect(navs).toEqual(["https://www.instagram.com/?variant=following"]);
+      expect(events).toEqual([]);
     });
 
-    it("tapping Home on the Following feed does nothing", () => {
+    it("a Home link tapped on the Following feed does nothing", () => {
       installHome();
       const ev = tap("/");
       expect(ev.defaultPrevented).toBe(true);
       expect(navs).toEqual([]);
       expect(backs).toBe(0);
+      expect(events).toEqual([]);
+    });
+
+    it("a Home pushState on the Following feed reloads it (the site may already be showing the main feed)", () => {
+      installHome();
+      history.pushState(null, "", "/");
+      expect(location.search).toBe("?variant=following");
+      expect(navs).toEqual(["https://www.instagram.com/?variant=following"]);
+      expect(events).toEqual([]);
+    });
+
+    it("other blocked pages are still reported", () => {
+      installHome();
+      history.pushState(null, "", "/reels/");
+      expect(events[0]).toMatchObject({ type: "routeBlocked", path: "/reels/", redirectedTo: FOLLOWING });
     });
 
     it("switching between Following and Favorites goes through", () => {

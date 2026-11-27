@@ -193,6 +193,9 @@ export function installRouter(getRules: () => ActiveRules, hooks: RouterHooks): 
 
   const report = (path: string, d: RouteDecision) => {
     if (d.action === "allow") return;
+    // A redirect that takes part in normal navigation (Home → Following feed) isn't a block:
+    // reporting it would show "Blocked by your settings" on every Home tap.
+    if (d.action === "redirect" && d.navigateInApp) return;
     hooks.report({
       type: "routeBlocked",
       path,

@@ -3,20 +3,36 @@ import SwiftUI
 import UIKit
 import WebKit
 
-/// A WKWebView for one platform with the two engine bundles injected at document start.
+/// Shows a platform's kept web view (`BrowserSession`). The web view outlives this view: closing
+/// the browser takes it out of the hierarchy without tearing it down.
 struct WebViewContainer: UIViewRepresentable {
     static let messageHandlerName = "socialRewind"
 
-    let platform: Platform
-    let startURL: URL
-    let scripts: InjectedScripts
-    let controller: BrowserController
+    let webView: WKWebView
 
-    func makeCoordinator() -> Coordinator {
-        Coordinator(platform: platform, controller: controller)
+    func makeUIView(context: Context) -> UIView {
+        let host = UIView()
+        host.backgroundColor = .systemBackground
+        embed(in: host)
+        return host
     }
 
-    func makeUIView(context: Context) -> WKWebView {
+    func updateUIView(_ host: UIView, context: Context) {}
+
+    static func dismantleUIView(_ host: UIView, coordinator: ()) {
+        // Leave the web view alone if another host has already taken it.
+        for view in host.subviews where view is WKWebView { view.removeFromSuperview() }
+    }
+
+    private func embed(in host: UIView) {
+        webView.removeFromSuperview()
+        webView.frame = host.bounds
+        webView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        host.addSubview(webView)
+    }
+
+    /// A WKWebView for one platform with the two engine bundles injected at document start.
+    static func makeWebView(platform: Platform, scripts: InjectedScripts, delegate: Delegate) -> WKWebView {
         let configuration = WKWebViewConfiguration()
         // Separate, persistent cookie jar per platform (iOS 17+).
         configuration.websiteDataStore = WKWebsiteDataStore(forIdentifier: platform.websiteDataStoreID)
@@ -27,36 +43,23 @@ struct WebViewContainer: UIViewRepresentable {
         let contentController = configuration.userContentController
         scripts.install(in: contentController)
         // Registered only in the isolated world, so the page's own scripts can't see or call it.
-        contentController.add(WeakScriptMessageHandler(context.coordinator),
-                              contentWorld: InjectedScripts.isolatedWorld, name: Self.messageHandlerName)
+        contentController.add(WeakScriptMessageHandler(delegate),
+                              contentWorld: InjectedScripts.isolatedWorld, name: messageHandlerName)
 
         let webView = WKWebView(frame: .zero, configuration: configuration)
-        webView.navigationDelegate = context.coordinator
-        webView.uiDelegate = context.coordinator
+        webView.navigationDelegate = delegate
+        webView.uiDelegate = delegate
         webView.allowsBackForwardNavigationGestures = true
         #if DEBUG
         webView.isInspectable = true // Safari → Develop menu; the spikes depend on this
         #endif
-
-        controller.webView = webView
-        context.coordinator.observeURL(of: webView)
-        webView.load(URLRequest(url: startURL))
         return webView
     }
 
-    func updateUIView(_ webView: WKWebView, context: Context) {}
-
-    static func dismantleUIView(_ webView: WKWebView, coordinator: Coordinator) {
-        coordinator.stopObserving()
-        webView.stopLoading()
-        webView.configuration.userContentController.removeScriptMessageHandler(
-            forName: messageHandlerName, contentWorld: InjectedScripts.isolatedWorld)
-    }
-
-    // MARK: - Coordinator
+    // MARK: - Delegate
 
     @MainActor
-    final class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate, WKScriptMessageHandler {
+    final class Delegate: NSObject, WKNavigationDelegate, WKUIDelegate, WKScriptMessageHandler {
         let platform: Platform
         let policy: HostPolicy
         let controller: BrowserController

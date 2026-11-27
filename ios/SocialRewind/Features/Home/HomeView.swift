@@ -44,7 +44,7 @@ struct HomeView: View {
                 }
             }
             .fullScreenCover(item: $model.openPlatform) { platform in
-                PlatformBrowserView(platform: platform)
+                PlatformBrowserView(session: model.browserSessions.session(for: platform))
                     .environment(model)
             }
         }

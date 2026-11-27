@@ -1,20 +1,19 @@
 import RewindCore
 import SwiftUI
+import WebKit
 
 /// Full-screen filtered browser for one platform.
 struct PlatformBrowserView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.dismiss) private var dismiss
 
-    let platform: Platform
-    @State private var browser: BrowserController
-    /// Scripts fixed at web view creation; later changes go through `browser.apply`.
-    @State private var initialScripts: InjectedScripts?
+    /// Outlives this view, so closing and reopening keeps the page (see `BrowserSession`).
+    let session: BrowserSession
+    @State private var webView: WKWebView?
+    @State private var prepared = false
 
-    init(platform: Platform) {
-        self.platform = platform
-        _browser = State(initialValue: BrowserController(platform: platform))
-    }
+    private var platform: Platform { session.platform }
+    private var browser: BrowserController { session.controller }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -23,11 +22,12 @@ struct PlatformBrowserView: View {
             content
         }
         .onAppear {
-            if initialScripts == nil { initialScripts = model.injectedScripts(for: platform) }
             browser.reminderSettings = model.reminders
             browser.routeGuard = model.routeGuard(for: platform)
             browser.onEvent = { [model, platform] event in model.handle(event, from: platform) }
+            open()
         }
+        .onDisappear { session.didClose() }
         .onChange(of: model.settings(for: platform)) { old, new in
             // grayscale and postCounter are CSS/DOM-only and update live in the isolated world.
             // Anything else (mode, features → routes/network) needs a reload so the page-world
@@ -52,10 +52,25 @@ struct PlatformBrowserView: View {
                 if !Task.isCancelled { browser.minuteElapsed() }
             }
         }
-        .sheet(item: $browser.reminder) { reminder in
+        .sheet(item: Bindable(browser).reminder) { reminder in
             ReminderSheet(reminder: reminder, platform: platform) { dismiss() }
                 .presentationDetents([.medium])
         }
+    }
+
+    private func open() {
+        defer { prepared = true }
+        // nil → fail closed: no engine or rules, no page.
+        guard let scripts = model.injectedScripts(for: platform), let pack = model.rulePack(for: platform) else { return }
+        if session.webView == nil {
+            let start = platform.startURL(startPath: model.routeGuard(for: platform)?.modeHome ?? pack.pack.startPath)
+            webView = session.webView(startURL: start, scripts: scripts)
+        } else {
+            webView = session.webView
+            // Settings, the username or the rules changed while the browser was closed.
+            if browser.installedScripts != scripts { browser.apply(scripts, liveUpdate: nil, reload: true) }
+        }
+        session.didOpen()
     }
 
     private func reapply(reload: Bool) {
@@ -65,18 +80,17 @@ struct PlatformBrowserView: View {
     }
 
     @ViewBuilder private var content: some View {
-        if let scripts = initialScripts, let pack = model.rulePack(for: platform) {
+        if let webView {
             ZStack {
-                WebViewContainer(platform: platform,
-                                 startURL: platform.startURL(startPath: model.routeGuard(for: platform)?.modeHome ?? pack.pack.startPath),
-                                 scripts: scripts,
-                                 controller: browser)
+                WebViewContainer(webView: webView)
                 // Fail closed: cover the page until the engine reports ready.
                 if browser.filterState != .ready {
                     FilterStatusCover(state: browser.filterState, retry: browser.retry, close: { dismiss() })
                 }
             }
             .overlay(alignment: .bottom) { blockedNotice }
+        } else if !prepared {
+            Color(.systemBackground)
         } else {
             ContentUnavailableView("Filters unavailable",
                                    systemImage: "exclamationmark.shield",

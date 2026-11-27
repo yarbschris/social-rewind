@@ -33,7 +33,7 @@ struct DebugScreenView: View {
         case .settings: NavigationStack { PlatformSettingsView(platform: .instagram) }
         case .locked: NavigationStack { LockedAppsView() }
         case .stats: NavigationStack { StatsView() }
-        case .browser: PlatformBrowserView(platform: .instagram)
+        case .browser: BrowserDebugScreen()
         case .loading: FilterStatusCover(state: .loading, retry: {}, close: {})
         case .failed:
             FilterStatusCover(state: .failed("The filter engine didn't start within 10 seconds."), retry: {}, close: {})
@@ -45,5 +45,10 @@ struct DebugScreenView: View {
                 }
         }
     }
+}
+
+private struct BrowserDebugScreen: View {
+    @Environment(AppModel.self) private var model
+    var body: some View { PlatformBrowserView(session: model.browserSessions.session(for: .instagram)) }
 }
 #endif

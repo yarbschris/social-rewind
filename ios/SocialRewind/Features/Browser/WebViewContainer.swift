@@ -26,9 +26,16 @@ struct WebViewContainer: UIViewRepresentable {
 
     private func embed(in host: UIView) {
         webView.removeFromSuperview()
-        webView.frame = host.bounds
-        webView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        // Constraints rather than a frame: the new host starts at zero size, and shrinking the
+        // kept page to nothing and back would reflow it and lose the scroll position.
+        webView.translatesAutoresizingMaskIntoConstraints = false
         host.addSubview(webView)
+        NSLayoutConstraint.activate([
+            webView.leadingAnchor.constraint(equalTo: host.leadingAnchor),
+            webView.trailingAnchor.constraint(equalTo: host.trailingAnchor),
+            webView.topAnchor.constraint(equalTo: host.topAnchor),
+            webView.bottomAnchor.constraint(equalTo: host.bottomAnchor),
+        ])
     }
 
     /// A WKWebView for one platform with the two engine bundles injected at document start.

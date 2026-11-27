@@ -62,6 +62,9 @@ struct PlatformBrowserView: View {
         defer { prepared = true }
         // nil → fail closed: no engine or rules, no page.
         guard let scripts = model.injectedScripts(for: platform), let pack = model.rulePack(for: platform) else { return }
+        // A page that failed to load (offline, or the engine never reported ready) starts over,
+        // as it did when every open made a new web view.
+        if case .failed = browser.filterState { session.tearDown() }
         if session.webView == nil {
             let start = platform.startURL(startPath: model.routeGuard(for: platform)?.modeHome ?? pack.pack.startPath)
             webView = session.webView(startURL: start, scripts: scripts)

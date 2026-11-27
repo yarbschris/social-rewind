@@ -33,6 +33,7 @@ final class BrowserSession {
         delegate.observeURL(of: webView)
         self.delegate = delegate
         self.webView = webView
+        controller.navigationStarted() // covered until the new page's engine reports ready
         webView.load(URLRequest(url: startURL))
         return webView
     }

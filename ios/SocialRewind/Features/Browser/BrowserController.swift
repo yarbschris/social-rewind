@@ -63,6 +63,9 @@ final class BrowserController {
         seenKeys.removeAll()
         reminder = nil
         lastBlockedPath = nil
+        // A tripped loop breaker used to clear with a new page on every open; keep that.
+        routeEnforcementDisabled = false
+        forcedNavigationLimiter.reset()
     }
 
     // MARK: Engine events

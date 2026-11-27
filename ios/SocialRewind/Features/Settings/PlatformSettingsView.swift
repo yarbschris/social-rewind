@@ -1,3 +1,4 @@
+import AppIntents
 import RewindCore
 import SwiftUI
 
@@ -56,6 +57,10 @@ struct PlatformSettingsView: View {
                 Toggle("Grayscale", isOn: settingBinding(\.grayscale))
                 Toggle("Post counter", isOn: settingBinding(\.postCounter))
                 ReminderControls()
+            }
+
+            if ShortcutPlatform(rawValue: platform.rawValue) != nil {
+                HomeScreenShortcutSection(platform: platform)
             }
 
             Section {
@@ -136,6 +141,30 @@ private struct UsernameSection: View {
     private func save() {
         guard draft != (model.username(for: platform) ?? "") else { return }
         invalid = !model.setUsername(draft, for: platform)
+    }
+}
+
+/// How to put "Open <platform> in Social Rewind" on the Home Screen. The app can't add the icon
+/// itself: only the Shortcuts app can, so this explains the steps and links there.
+private struct HomeScreenShortcutSection: View {
+    let platform: Platform
+
+    var body: some View {
+        Section {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("1. In Shortcuts, tap **+** to make a new shortcut.")
+                Text("2. Search for **Social Rewind** and pick **Open \(platform.displayName) in Social Rewind**.")
+                Text("3. Tap the shortcut's name at the top, then **Add to Home Screen**. You can choose its name and icon.")
+            }
+            .font(.subheadline)
+            ShortcutsLink()
+                .shortcutsLinkStyle(.automaticOutline)
+                .frame(maxWidth: .infinity)
+        } header: {
+            Text("Home Screen shortcut")
+        } footer: {
+            Text("Put \(platform.displayName) on your Home Screen so it opens here. You can also say “Open \(platform.displayName) in Social Rewind” to Siri, or use it with the Action button.")
+        }
     }
 }
 

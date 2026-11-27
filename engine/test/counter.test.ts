@@ -84,6 +84,26 @@ describe("post counter", () => {
       }
     });
 
+    it("keys each story by its media id, and a highlight once", () => {
+      expect(routeKeyFor("/stories/someone/3141592653589793/", routes)).toBe("3141592653589793");
+      expect(routeKeyFor("/stories/someone/3141592653589793", routes)).toBe("3141592653589793");
+      expect(routeKeyFor("/stories/highlights/17900000000000000/", routes)).toBe("17900000000000000");
+      for (const path of ["/stories/", "/stories/someone/", "/stories/someone/abc/"]) {
+        expect(routeKeyFor(path, routes), path).toBeNull();
+      }
+    });
+
+    it("counts each story the user watches as it advances", () => {
+      const c = installCounter(def, deps(), "/");
+      c.pathChanged("/stories/someone/111/");
+      runTimers();
+      c.pathChanged("/stories/someone/222/");
+      runTimers();
+      c.pathChanged("/stories/someone/111/");
+      runTimers();
+      expect(c.count()).toBe(2);
+    });
+
     it("counts a post page the user stays on, e.g. one opened from DMs", () => {
       const c = installCounter(def, deps(), "/direct/t/123/");
       c.pathChanged("/p/ZZZ/");

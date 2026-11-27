@@ -46,6 +46,9 @@ struct WebViewContainer: UIViewRepresentable {
         configuration.allowsInlineMediaPlayback = true
         // No autoplay with sound.
         configuration.mediaTypesRequiringUserActionForPlayback = .audio
+        // Identify as Mobile Safari, not an unknown embedded browser, so the platform's login offers
+        // its normal two-factor options (see BrowserIdentity).
+        configuration.applicationNameForUserAgent = BrowserIdentity.safariApplicationName(systemVersion: UIDevice.current.systemVersion)
 
         let contentController = configuration.userContentController
         scripts.install(in: contentController)

@@ -1,7 +1,9 @@
 import SwiftUI
 import Observation
 import FamilyControls
+import DeviceActivity
 import RewindCore
+import UserNotifications
 import os
 
 private let log = Logger(subsystem: "app.socialrewind", category: "AppModel")
@@ -32,6 +34,17 @@ final class AppModel {
     /// A loosening change waiting for the PIN. RootView presents it.
     var pinPrompt: PinPrompt?
     @ObservationIgnored private var unlockedUntil: Date?
+
+    /// Whether Social Rewind may post notifications. nil until checked. The shield's "Open in
+    /// Social Rewind" button can only reach the app through a notification, so locking is a dead
+    /// end without them.
+    private(set) var notificationsAllowed: Bool?
+
+    /// Native apps unlocked so the user can approve a login there (Instagram's two-factor). They
+    /// lock again when Social Rewind comes back from the background, or when a 16-minute Screen
+    /// Time window ends, whichever is first.
+    private(set) var signInUnlocks: Set<Platform> = []
+    @ObservationIgnored private var wasInBackground = false
 
     var onboardingComplete: Bool {
         didSet { store.onboardingComplete = onboardingComplete }
@@ -294,8 +307,77 @@ final class AppModel {
     }
 
     func applyShields() {
-        let active = selections.filter { lockedPlatforms.contains($0.key) }.map(\.value)
+        let active = selections.filter { lockedPlatforms.contains($0.key) && !signInUnlocks.contains($0.key) }.map(\.value)
         shields.apply(active)
+        Task { await refreshNotificationPermission() }
+    }
+
+    /// Whether the platform's native app is locked right now (picked, locked, not unlocked for a sign-in).
+    func isAppLocked(_ platform: Platform) -> Bool {
+        BuildFeatures.screenTime && lockedPlatforms.contains(platform) && !signInUnlocks.contains(platform)
+            && !(selections[platform]?.applicationTokens.isEmpty ?? true)
+    }
+
+    /// Unlocks the native app so a login can be approved there. Starts the Screen Time backstop
+    /// first and stays locked if that fails. Callers check the settings PIN first.
+    func unlockForSignIn(_ platform: Platform) -> Bool {
+        guard isAppLocked(platform) else { return false }
+        let now = Date.now
+        let calendar = Calendar.current
+        let parts: Set<Calendar.Component> = [.hour, .minute, .second]
+        // Screen Time intervals must be at least 15 minutes long.
+        let schedule = DeviceActivitySchedule(intervalStart: calendar.dateComponents(parts, from: now),
+                                              intervalEnd: calendar.dateComponents(parts, from: now.addingTimeInterval(16 * 60)),
+                                              repeats: false)
+        do {
+            try DeviceActivityCenter().startMonitoring(DeviceActivityName(ShieldState.signInActivity(for: platform)), during: schedule)
+        } catch {
+            log.error("Sign-in unlock not started: \(error.localizedDescription, privacy: .public)")
+            return false
+        }
+        signInUnlocks.insert(platform)
+        applyShields()
+        return true
+    }
+
+    func appDidEnterBackground() {
+        wasInBackground = true
+        lockSettings()
+    }
+
+    /// Coming back from the background ends any sign-in unlock: the login has been approved or abandoned.
+    func appDidBecomeActive() {
+        applyDuePinReset()
+        Task { await refreshNotificationPermission() }
+        guard wasInBackground else { return }
+        wasInBackground = false
+        guard !signInUnlocks.isEmpty else { return }
+        let names = signInUnlocks.map { DeviceActivityName(ShieldState.signInActivity(for: $0)) }
+        DeviceActivityCenter().stopMonitoring(names)
+        signInUnlocks = []
+        applyShields()
+    }
+
+    /// At least one platform's native app is actually shielded.
+    var hasActiveLocks: Bool {
+        BuildFeatures.screenTime && lockedPlatforms.contains { !(selections[$0]?.applicationTokens.isEmpty ?? true) }
+    }
+
+    /// Asks for notification permission once an app is locked, if it was never asked (e.g. after
+    /// onboarding on a build without Screen Time), then records whether it's allowed.
+    func refreshNotificationPermission() async {
+        var status = await Self.notificationStatus()
+        if status == .notDetermined, hasActiveLocks, onboardingComplete {
+            _ = try? await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound])
+            status = await Self.notificationStatus()
+        }
+        notificationsAllowed = [.authorized, .provisional, .ephemeral].contains(status)
+    }
+
+    /// Off the main actor, so the non-Sendable `UNNotificationSettings` never crosses actors
+    /// (older SDKs reject that); only the Sendable status comes back.
+    private nonisolated static func notificationStatus() async -> UNAuthorizationStatus {
+        await UNUserNotificationCenter.current().notificationSettings().authorizationStatus
     }
 
     // MARK: Rule refresh (opt-in, docs/decisions/0002)

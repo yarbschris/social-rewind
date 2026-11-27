@@ -407,3 +407,67 @@ describe("rev 19: AI content label", () => {
     expect([...document.querySelectorAll(`[${HIDDEN_ATTR}]`)].map((e) => `${e.getAttribute("data-id")}:${e.getAttribute(HIDDEN_ATTR)}`)).toEqual(["ai:hideAiLabeled.dom0"]);
   });
 });
+
+describe("Hide feed (hideBranch)", () => {
+  let dom: DomHandle;
+  afterEach(() => dom.uninstall());
+  // Home: the stories row and the feed column are siblings under main; the feed column holds
+  // the posts and the slot that loads more when it scrolls into view.
+  const tray =
+    '<div id="trayWrap"><div><div id="tray"><div role="button" aria-label="Story by a"></div><div role="button" aria-label="Story by b"></div></div></div></div>';
+  const ring = '<div><div role="button" aria-label="Story by c"></div></div>';
+  const feed = (posts: string) => `<div id="feed"><div id="list">${posts}</div><div id="sentinel"></div></div>`;
+  const hiddenIds = () => [...document.querySelectorAll(`[${HIDDEN_ATTR}]`)].map((e) => e.id || e.getAttribute("data-id"));
+  const main = () => document.querySelector("main")!;
+
+  function start(path: string, features: Record<string, boolean> = { hideFeed: true }) {
+    document.documentElement.innerHTML = "<head></head><body><main></main></body>";
+    const rules = compile(config({ settings: settings({ features }) }));
+    dom = installDom(() => rules, { debug: false, grayscale: false });
+    dom.setPath(path);
+    dom.pathChanged();
+  }
+
+  it("hides the whole feed column, loading slot included, and keeps the stories row", async () => {
+    start("/");
+    main().innerHTML = `<div id="col">${tray}${feed(post("1", ring) + post("2"))}</div>`;
+    await flush();
+    expect(hiddenIds()).toEqual(["feed"]);
+  });
+
+  it("without a stories row, hides the part of main that holds the feed", async () => {
+    start("/");
+    main().innerHTML = `<div id="col">${feed(post("1"))}</div>`;
+    await flush();
+    expect(hiddenIds()).toEqual(["col"]);
+  });
+
+  it("posts that load later stay inside the hidden column", async () => {
+    start("/");
+    main().innerHTML = `<div id="col">${tray}${feed(post("1"))}</div>`;
+    await flush();
+    document.getElementById("list")!.insertAdjacentHTML("beforeend", post("2") + post("3"));
+    await flush();
+    expect(hiddenIds()).toEqual(["feed"]);
+  });
+
+  it("only applies on Home, and lets go when the user leaves", async () => {
+    start("/someone/");
+    main().innerHTML = `<div id="col">${tray}${feed(post("1"))}</div>`;
+    await flush();
+    expect(hiddenIds()).toEqual([]);
+    dom.setPath("/");
+    dom.pathChanged();
+    expect(hiddenIds()).toEqual(["feed"]);
+    dom.setPath("/someone/");
+    dom.pathChanged();
+    expect(hiddenIds()).toEqual([]);
+  });
+
+  it("does nothing while Hide feed is off", async () => {
+    start("/", {});
+    main().innerHTML = `<div id="col">${tray}${feed(post("1"))}</div>`;
+    await flush();
+    expect(hiddenIds()).toEqual([]);
+  });
+});

@@ -479,3 +479,14 @@ private func pack(revision: Int = 1, minEngine: Int = 1, platform: String = "ins
         #expect(Set(Platform.allCases.map(\.websiteDataStoreID)).count == Platform.allCases.count)
     }
 }
+
+@Suite struct SignInPathTests {
+    @Test func instagramSignInAndVerificationPages() {
+        for path in ["/accounts/login/", "/accounts/login", "/accounts/onetap/", "/challenge/123/", "/two_factor/", "/auth_platform/codeentry/"] {
+            #expect(Platform.instagram.isSignInPath(path), "\(path)")
+        }
+        for path in ["/", "/direct/inbox/", "/accounts/edit/", "/challenger/", "/p/abc/", "/someone/"] {
+            #expect(!Platform.instagram.isSignInPath(path), "\(path)")
+        }
+    }
+}

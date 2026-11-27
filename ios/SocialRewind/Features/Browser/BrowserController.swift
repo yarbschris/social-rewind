@@ -29,6 +29,8 @@ final class BrowserController {
     private(set) var sessionPosts = 0
     private(set) var sessionMinutes = 0
     private(set) var lastBlockedPath: String?
+    /// On one of the platform's sign-in or verification pages, where "Sign-in help" is offered.
+    private(set) var onSignInPage = false
     var reminder: Reminder?
 
     @ObservationIgnored weak var webView: WKWebView?
@@ -130,6 +132,7 @@ final class BrowserController {
     /// Native backstop. `WKWebView.url` changes on pushState too, so this catches in-app
     /// navigations even if the page-world history patch was tampered with.
     func urlChanged(_ url: URL?) {
+        onSignInPage = url.map { platform.isSignInPath($0.path) } ?? false
         guard let url, !routeEnforcementDisabled, let routeGuard,
               ["http", "https"].contains(url.scheme?.lowercased() ?? "") else { return }
         let target: String

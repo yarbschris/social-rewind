@@ -2,7 +2,7 @@ import Foundation
 
 public enum EngineInfo {
     /// Mirror of `ENGINE_VERSION` in `engine/src/core/types.ts`. Keep in sync.
-    public static let version = 2
+    public static let version = 3
 }
 
 /// Mirror of `RulePack` in `engine/src/core/types.ts`.

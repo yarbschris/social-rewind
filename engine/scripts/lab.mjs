@@ -81,7 +81,9 @@ function labRuntime(config, KNOWN_SEGMENTS) {
             ? `${r.container} ∋ ${JSON.stringify(r.text)}`
             : r.type === "hideAllButFirst"
               ? `all but first ${r.selector}${r.branch ? " (whole branch)" : ""}`
-              : `${r.match} → ${r.closest}`) + (r.withWrappers ? " (+ wrappers)" : "") + (r.collapse ? " (collapse)" : ""),
+              : r.type === "hideBranch"
+                ? `branch of ${r.match} in ${r.within}${r.keep ? `, keeping ${r.keep}` : ""}`
+                : `${r.match} → ${r.closest}`) + (r.withWrappers ? " (+ wrappers)" : "") + (r.collapse ? " (collapse)" : ""),
       });
     });
     return rows;

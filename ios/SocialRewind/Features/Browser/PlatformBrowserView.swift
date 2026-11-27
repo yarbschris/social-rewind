@@ -11,6 +11,7 @@ struct PlatformBrowserView: View {
     let session: BrowserSession
     @State private var webView: WKWebView?
     @State private var prepared = false
+    @State private var showSignInHelp = false
 
     private var platform: Platform { session.platform }
     private var browser: BrowserController { session.controller }
@@ -51,6 +52,9 @@ struct PlatformBrowserView: View {
                 try? await Task.sleep(for: .seconds(60))
                 if !Task.isCancelled { browser.minuteElapsed() }
             }
+        }
+        .sheet(isPresented: $showSignInHelp) {
+            SignInHelpSheet(platform: platform)
         }
         .sheet(item: Bindable(browser).reminder) { reminder in
             ReminderSheet(reminder: reminder, platform: platform) { dismiss() }
@@ -109,6 +113,15 @@ struct PlatformBrowserView: View {
             .accessibilityLabel("Close \(platform.displayName)")
 
             Text(platform.displayName).font(.headline)
+
+            // Offered on sign-in and verification pages, and until the account is known at all
+            // (a logged-out Instagram shows its login form on the home page).
+            if browser.onSignInPage || model.username(for: platform) == nil {
+                Button("Sign-in help") { showSignInHelp = true }
+                    .font(.subheadline)
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+            }
 
             Spacer()
 

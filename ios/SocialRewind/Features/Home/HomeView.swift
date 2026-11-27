@@ -9,6 +9,10 @@ struct HomeView: View {
         @Bindable var model = model
         NavigationStack {
             List {
+                if model.hasActiveLocks && model.notificationsAllowed == false {
+                    NotificationsOffSection()
+                }
+
                 Section {
                     ForEach(Platform.allCases.filter(\.isAvailable)) { platform in
                         PlatformRow(platform: platform)
@@ -92,12 +96,44 @@ private struct PlatformRow: View {
     }
 }
 
+/// Without notifications, the shield's "Open in Social Rewind" button does nothing visible.
+private struct NotificationsOffSection: View {
+    var body: some View {
+        Section {
+            Label("Notifications are off", systemImage: "bell.slash")
+                .font(.headline)
+            Text("When you open a locked app, Social Rewind reaches you with a notification. Apple doesn't let the lock screen open apps directly. Without notifications, the lock screen's button can't bring you here.")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+            Button("Turn on in Settings") {
+                if let url = URL(string: UIApplication.openNotificationSettingsURLString) {
+                    UIApplication.shared.open(url)
+                }
+            }
+        }
+    }
+}
+
 /// Re-pick or unlock the native apps after onboarding.
 struct LockedAppsView: View {
     @Environment(AppModel.self) private var model
+    @State private var screenTimeStatus = AuthorizationCenter.shared.authorizationStatus
 
     var body: some View {
         List {
+            // Someone who finished onboarding on a build without Screen Time never granted it.
+            if screenTimeStatus != .approved {
+                Section {
+                    Button("Allow Screen Time access") {
+                        Task {
+                            try? await AuthorizationCenter.shared.requestAuthorization(for: .individual)
+                            screenTimeStatus = AuthorizationCenter.shared.authorizationStatus
+                        }
+                    }
+                } footer: {
+                    Text("Social Rewind needs Screen Time access to lock apps. Everything stays on your phone.")
+                }
+            }
             ForEach(Platform.allCases.filter(\.isAvailable)) { platform in
                 let hasApp = !(model.selections[platform]?.applicationTokens.isEmpty ?? true)
                 Section {

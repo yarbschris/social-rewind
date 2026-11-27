@@ -8,6 +8,7 @@ struct PlatformBrowserView: View {
 
     let platform: Platform
     @State private var browser: BrowserController
+    @State private var showSignInHelp = false
     /// Scripts fixed at web view creation; later changes go through `browser.apply`.
     @State private var initialScripts: InjectedScripts?
 
@@ -52,6 +53,9 @@ struct PlatformBrowserView: View {
                 if !Task.isCancelled { browser.minuteElapsed() }
             }
         }
+        .sheet(isPresented: $showSignInHelp) {
+            SignInHelpSheet(platform: platform)
+        }
         .sheet(item: $browser.reminder) { reminder in
             ReminderSheet(reminder: reminder, platform: platform) { dismiss() }
                 .presentationDetents([.medium])
@@ -92,6 +96,15 @@ struct PlatformBrowserView: View {
             .accessibilityLabel("Close \(platform.displayName)")
 
             Text(platform.displayName).font(.headline)
+
+            // Offered on sign-in and verification pages, and until the account is known at all
+            // (a logged-out Instagram shows its login form on the home page).
+            if browser.onSignInPage || model.username(for: platform) == nil {
+                Button("Sign-in help") { showSignInHelp = true }
+                    .font(.subheadline)
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+            }
 
             Spacer()
 

@@ -46,6 +46,26 @@ public enum Platform: String, CaseIterable, Codable, Sendable, Identifiable, Has
         URL(string: startPath, relativeTo: origin)?.absoluteURL ?? origin
     }
 
+    /// Opens the platform's own app, e.g. to approve a login there. nil if it has no known scheme.
+    public var nativeAppURL: URL? {
+        switch self {
+        case .instagram: URL(string: "instagram://app")
+        default: nil
+        }
+    }
+
+    /// Paths of the platform's sign-in and verification pages (two-factor, "confirm it's you"),
+    /// where Social Rewind offers help approving the login in the locked native app.
+    public func isSignInPath(_ path: String) -> Bool {
+        switch self {
+        case .instagram:
+            let prefixes = ["/accounts/login", "/accounts/onetap", "/challenge", "/two_factor", "/auth_platform"]
+            return prefixes.contains { path == $0 || path.hasPrefix($0 + "/") || path.hasPrefix($0 + "?") }
+        default:
+            return false
+        }
+    }
+
     /// Bundled resource name (without extension) of the rule pack.
     public var rulePackResourceName: String { rawValue }
 

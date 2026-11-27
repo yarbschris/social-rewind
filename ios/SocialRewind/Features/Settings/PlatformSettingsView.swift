@@ -5,6 +5,7 @@ import SwiftUI
 struct PlatformSettingsView: View {
     @Environment(AppModel.self) private var model
     let platform: Platform
+    @State private var showSignInHelp = false
 
     var body: some View {
         Group {
@@ -15,6 +16,9 @@ struct PlatformSettingsView: View {
             }
         }
         .navigationTitle(platform.displayName)
+        .sheet(isPresented: $showSignInHelp) {
+            SignInHelpSheet(platform: platform)
+        }
     }
 
     private func form(_ loaded: LoadedRulePack) -> some View {
@@ -52,6 +56,12 @@ struct PlatformSettingsView: View {
                 Toggle("Grayscale", isOn: settingBinding(\.grayscale))
                 Toggle("Post counter", isOn: settingBinding(\.postCounter))
                 ReminderControls()
+            }
+
+            Section {
+                Button("Trouble signing in?") { showSignInHelp = true }
+            } footer: {
+                Text("If \(platform.displayName) wants you to approve the login in its app, Social Rewind can unlock it for a moment.")
             }
 
             RulesSection(revision: pack.revision)

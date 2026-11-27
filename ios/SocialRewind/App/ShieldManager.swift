@@ -4,7 +4,7 @@ import ManagedSettings
 /// Applies Screen Time shields to the native apps the user picked.
 struct ShieldManager {
     /// Created on use, so the TestFlight preview (no Screen Time entitlement) never makes one.
-    private var store: ManagedSettingsStore { ManagedSettingsStore(named: ManagedSettingsStore.Name("socialRewind")) }
+    private var store: ManagedSettingsStore { ManagedSettingsStore(named: ShieldState.storeName) }
 
     func apply(_ selections: [FamilyActivitySelection]) {
         guard BuildFeatures.screenTime else { return }

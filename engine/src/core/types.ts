@@ -6,7 +6,7 @@
  */
 
 /** Bump when the engine gains a capability that rule packs may depend on. */
-export const ENGINE_VERSION = 2;
+export const ENGINE_VERSION = 3;
 
 export type FeatureId = string;
 export type ModeId = string; // "normal" | keys of RulePack.modes
@@ -77,7 +77,7 @@ export interface RuleSet {
   network?: NetworkRule[];
 }
 
-export type DomRule = HideClosestRule | HideIfTextRule | HideAllButFirstRule;
+export type DomRule = HideClosestRule | HideIfTextRule | HideAllButFirstRule | HideBranchRule;
 
 /**
  * Every DOM rule may carry `when`: a selector tested against <html>. The rule
@@ -130,6 +130,19 @@ export interface HideAllButFirstRule extends Conditional {
    * goes, including whatever loads more when scrolled into view.
    */
   branch?: boolean;
+}
+
+/**
+ * For each `match`, hide its largest ancestor inside the nearest `within` that contains no `keep`
+ * element (engine 3+). Used to hide a whole list, including whatever loads more when scrolled
+ * into view, while keeping a neighbour such as the stories row. Without a `keep` on the page,
+ * the branch is the child of `within` that holds the match.
+ */
+export interface HideBranchRule extends Conditional {
+  type: "hideBranch";
+  match: string;
+  within: string;
+  keep?: string;
 }
 
 export interface RouteRule {

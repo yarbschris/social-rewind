@@ -1,5 +1,5 @@
 import type { ActiveRules } from "./compile";
-import type { DomRule, HideClosestRule, HideIfTextRule } from "./types";
+import type { DomRule, HideBranchRule, HideClosestRule, HideIfTextRule } from "./types";
 import { send } from "./bridge";
 
 export const HIDDEN_ATTR = "data-sr-hidden";
@@ -124,6 +124,24 @@ function branchOf(el: Element, keep: Element): Element {
   return b;
 }
 
+/**
+ * The largest ancestor of `el` (or `el` itself) strictly inside `boundary` that contains no
+ * element matching `keep`.
+ */
+function branchWithin(el: Element, boundary: Element, keep: string | undefined): Element {
+  const hasKeep = (p: Element): boolean => {
+    if (!keep) return false;
+    try {
+      return p.querySelector(keep) !== null;
+    } catch {
+      return true; // invalid selector: hide as little as possible
+    }
+  };
+  let b = el;
+  for (let p = b.parentElement; p && p !== boundary && !hasKeep(p); p = p.parentElement) b = p;
+  return b;
+}
+
 export function installDom(getRules: () => ActiveRules, initial: DomOptions, onError: (m: string) => void = () => {}): DomHandle {
   let opts = initial;
   const style = document.createElement("style");
@@ -162,6 +180,19 @@ export function installDom(getRules: () => ActiveRules, initial: DomOptions, onE
     }
   };
 
+  const applyBranch = (root: ParentNode, id: string, rule: HideBranchRule) => {
+    for (const m of within(root, rule.match)) {
+      if (m.closest(`[${HIDDEN_ATTR}]`)) continue;
+      let boundary: Element | null = null;
+      try {
+        boundary = m.parentElement?.closest(rule.within) ?? null;
+      } catch {
+        /* invalid selector */
+      }
+      if (boundary) hide(branchWithin(m, boundary, rule.keep), id, rule);
+    }
+  };
+
   const containersFor = (root: ParentNode, selector: string): Set<Element> => {
     const set = new Set<Element>(within(root, selector));
     if (root instanceof Element) {
@@ -192,6 +223,7 @@ export function installDom(getRules: () => ActiveRules, initial: DomOptions, onE
     for (const { id, rule } of getRules().dom) {
       if (!applies(rule)) continue;
       if (rule.type === "hideClosest") applyClosest(root, id, rule);
+      else if (rule.type === "hideBranch") applyBranch(root, id, rule);
       else if (rule.type === "hideAllButFirst") {
         // Document-wide by nature: "first" only means something globally.
         const [first, ...rest] = within(document, rule.selector);

@@ -2,8 +2,8 @@
   "$schema": "./schema/rule-pack.schema.json",
   "schemaVersion": 1,
   "platform": "instagram",
-  "revision": 22,
-  "minEngineVersion": 2,
+  "revision": 23,
+  "minEngineVersion": 3,
   "startPath": "/",
   "alwaysAllowRoutes": [
     "^/accounts/",
@@ -204,6 +204,15 @@
       "rules": {
         "css": [
           "html[data-sr-path=\"/\"] main article"
+        ],
+        "dom": [
+          {
+            "type": "hideBranch",
+            "when": "html[data-sr-path=\"/\"]",
+            "match": "article",
+            "within": "main",
+            "keep": "div:has(> div[role=\"button\"][aria-label^=\"Story by\"]:nth-child(2))"
+          }
         ]
       }
     },

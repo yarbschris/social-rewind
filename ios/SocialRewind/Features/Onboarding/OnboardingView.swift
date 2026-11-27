@@ -130,7 +130,7 @@ struct OnboardingView: View {
 
     private var notifications: some View {
         StepView(systemImage: "bell.badge",
-                 title: "One more thing",
+                 title: "Turn on notifications",
                  message: "When you open a locked app, Social Rewind sends a notification you can tap to continue in the filtered view. Apple doesn't let the lock screen open apps directly.",
                  actionTitle: "Allow notifications") {
             Task {

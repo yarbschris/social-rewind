@@ -2,7 +2,7 @@ import Foundation
 
 public enum EngineInfo {
     /// Mirror of `ENGINE_VERSION` in `engine/src/core/types.ts`. Keep in sync.
-    public static let version = 3
+    public static let version = 4
 }
 
 /// Mirror of `RulePack` in `engine/src/core/types.ts`.
@@ -55,8 +55,12 @@ public struct RulePack: Codable, Sendable, Equatable {
     public struct RouteRule: Codable, Sendable, Equatable {
         public enum Action: String, Codable, Sendable { case block, redirect }
         public var pattern: String
+        /// Regex tested against the query ("" or "?…"); when set, the rule applies only if both match.
+        public var search: String?
         public var action: Action
         public var to: String?
+        /// Engine-only: follow the redirect on in-app navigation too.
+        public var navigateInApp: Bool?
     }
 }
 

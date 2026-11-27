@@ -6,7 +6,7 @@
  */
 
 /** Bump when the engine gains a capability that rule packs may depend on. */
-export const ENGINE_VERSION = 3;
+export const ENGINE_VERSION = 4;
 
 export type FeatureId = string;
 export type ModeId = string; // "normal" | keys of RulePack.modes
@@ -148,9 +148,20 @@ export interface HideBranchRule extends Conditional {
 export interface RouteRule {
   /** Regex tested against location.pathname. */
   pattern: string;
+  /**
+   * Regex tested against location.search ("" when there is none, else starting with "?").
+   * When set, the rule applies only if both match (engine 4+).
+   */
+  search?: string;
   action: "block" | "redirect";
-  /** Redirect target path. May use $1.. capture groups. */
+  /** Redirect target path, optionally with a query. May use $1.. capture groups. */
   to?: string;
+  /**
+   * Also follow this redirect when the site navigates in-app, instead of staying put
+   * (engine 4+). Like a mode's way out: step back if the target is the previous page,
+   * else load it. Use it where staying put would strand the user, e.g. the Home button.
+   */
+  navigateInApp?: boolean;
 }
 
 export interface NetworkRule {

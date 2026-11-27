@@ -64,6 +64,7 @@ Each of these came from a reviewer's memory of Instagram, so it's as unverified 
 - [ ] **Suggested-accounts carousel:** does the `main div:has(> div > a[href^="/explore/people/"])` rule hide the whole carousel or only its header?
 - [ ] **"Ad" false positives:** do comment previews or captions ever render "Ad" or "Sponsored" as a standalone text node inside an `article`? If so, scope the rule with `within: "header"`, using whatever the real header element is.
 - [ ] **Posts after "You're all caught up":** do they carry a per-post "Suggested" label at all?
+- [ ] **Following feed** (rev 24, engine 4). Seen on device: the main feed is mostly suggested posts and reels, so with them hidden it trickled one post at a time. No "You're all caught up" message appeared. `/?variant=following` exists on mobile web and scrolls smoothly in Social Rewind. With Block suggested posts on, Social Rewind opens on it, `/` redirects to it (`hideSuggested.route0`), and the Home button goes back to it: one step back if you came from it, otherwise a reload, and nothing if you're already there. To check: it opens on Following; Home from a profile returns there; Home on Following does nothing; switching to Favorites works; Hide feed still hides it.
 - [ ] **"reposted" label:** is it a standalone text node?
 - [ ] **Identity detection:** does the profile-picture alt text vary by locale? Is there a locale-free signal?
 - [ ] **`/explore/search/`:** is it a real standalone route on mobile web?

@@ -3,11 +3,24 @@ import type { BridgeEvent } from "./types";
 
 export type RouteDecision =
   | { action: "allow" }
-  | { action: "redirect"; to: string; reason: string; byMode: boolean }
+  | { action: "redirect"; to: string; reason: string; byMode: boolean; navigateInApp?: boolean }
   | { action: "block"; reason: string };
 
 function normalize(path: string): string {
   return path.endsWith("/") ? path : `${path}/`;
+}
+
+/** Split a same-origin target ("/path?query") into its path and search ("" or "?…"). */
+function splitTarget(target: string): { path: string; search: string } {
+  const q = target.indexOf("?");
+  return q < 0 ? { path: target, search: "" } : { path: target.slice(0, q), search: target.slice(q) };
+}
+
+/** Whether `here` (path + search) is the place `target` names. A target without a query ignores it. */
+function samePlace(here: string, target: string): boolean {
+  const a = splitTarget(here);
+  const b = splitTarget(target);
+  return normalize(a.path) === normalize(b.path) && (b.search === "" || a.search === b.search);
 }
 
 /**
@@ -20,8 +33,15 @@ export function isSafePath(to: string): boolean {
   return /^\/(?![/\\])/.test(to) && !to.includes("\\") && !to.includes("://") && !/[\u0000-\u001f\u007f]/.test(to);
 }
 
-/** Pure routing decision for a pathname. */
-export function evaluateRoute(pathname: string, rules: ActiveRules): RouteDecision {
+/** How many redirects in a row are followed before giving up and using the last target. */
+const MAX_REDIRECT_CHAIN = 3;
+
+/**
+ * Pure routing decision for a pathname and its search ("" or "?…"). A redirect whose target
+ * is itself redirected (e.g. Reels → "/" → the Following feed) goes straight to the end of the
+ * chain, so one forced navigation is enough.
+ */
+export function evaluateRoute(pathname: string, rules: ActiveRules, search = "", depth = 0): RouteDecision {
   if (rules.alwaysAllow.some((r) => r.test(pathname))) return { action: "allow" };
 
   const mode = rules.mode;
@@ -40,31 +60,40 @@ export function evaluateRoute(pathname: string, rules: ActiveRules): RouteDecisi
   for (const route of rules.routes) {
     const m = route.pattern.exec(pathname);
     if (!m) continue;
+    if (route.search && !route.search.test(search)) continue;
     if (route.action === "redirect" && route.to) {
       const to = route.to.replace(/\$(\d)/g, (_, n: string) => encodeURIComponent(m[Number(n)] ?? ""));
       if (!isSafePath(to)) return { action: "block", reason: `${route.id}:unsafe-target` };
-      if (normalize(to) === normalize(pathname)) continue; // never redirect to self
+      if (samePlace(pathname + search, to)) continue; // never redirect to self
       // If a mode is active, the redirect target itself must be reachable; otherwise use mode home.
-      if (mode && mode.home && evaluateRoute(to, { ...rules, routes: [] }).action !== "allow") {
+      const target = splitTarget(to);
+      if (mode && mode.home && evaluateRoute(target.path, { ...rules, routes: [] }, target.search).action !== "allow") {
         return { action: "redirect", to: mode.home, reason: route.id, byMode: true };
       }
-      return { action: "redirect", to, reason: route.id, byMode: false };
+      let final = to;
+      if (depth < MAX_REDIRECT_CHAIN) {
+        const onward = evaluateRoute(target.path, rules, target.search, depth + 1);
+        if (onward.action === "redirect" && !onward.byMode) final = onward.to;
+      }
+      return { action: "redirect", to: final, reason: route.id, byMode: false, ...(route.navigateInApp ? { navigateInApp: true } : {}) };
     }
     return { action: "block", reason: route.id };
   }
   return { action: "allow" };
 }
 
-function toPathname(url: string | URL | null | undefined): string | null {
+function toLocation(url: string | URL | null | undefined): { path: string; search: string } | null {
   if (url === null || url === undefined) return null;
   try {
     const u = new URL(String(url), location.href);
     if (u.origin !== location.origin) return null;
-    return u.pathname;
+    return { path: u.pathname, search: u.search };
   } catch {
     return null;
   }
 }
+
+const here = () => location.pathname + location.search;
 
 /** Resolve a decided target against our origin; null if it would leave it. */
 function sameOriginHref(to: string): string | null {
@@ -158,8 +187,8 @@ export function installRouter(getRules: () => ActiveRules, hooks: RouterHooks): 
   const origReplace = history.replaceState.bind(history);
   const replace = hooks.replace ?? ((href: string) => location.replace(href));
   const back = hooks.back ?? (() => history.back());
-  // The page the user was on before the current one, when we know it: set by our own
-  // allowed pushState, unknown (null) after back/forward or a page load.
+  // The page the user was on before the current one (path + search), when we know it: set by
+  // our own allowed pushState, unknown (null) after back/forward or a page load.
   let prevPath: string | null = null;
 
   const report = (path: string, d: RouteDecision) => {
@@ -191,31 +220,33 @@ export function installRouter(getRules: () => ActiveRules, hooks: RouterHooks): 
    * Fall back to a reload if the back doesn't land.
    */
   const leaveTo = (to: string) => {
-    if (prevPath === null || normalize(prevPath) !== normalize(to)) return navigate(to);
-    const from = location.pathname;
+    if (prevPath === null || !samePlace(prevPath, to)) return navigate(to);
+    const from = here();
     prevPath = null;
     back();
     setTimeout(() => {
-      if (location.pathname === from) navigate(to);
+      if (here() === from) navigate(to);
     }, hooks.backTimeoutMs ?? 1000);
   };
 
   const wrap =
     (orig: typeof history.pushState, isPush: boolean) =>
     (data: unknown, unused: string, url?: string | URL | null): void => {
-      const path = toPathname(url);
-      if (path === null) return orig(data, unused, url);
-      const d = evaluateRoute(path, getRules());
+      const loc = toLocation(url);
+      if (loc === null) return orig(data, unused, url);
+      const { path } = loc;
+      const d = evaluateRoute(path, getRules(), loc.search);
       report(path, d);
       if (d.action === "allow") {
-        const before = location.pathname;
+        const before = here();
         orig(data, unused, url);
-        if (isPush && normalize(before) !== normalize(path)) prevPath = before;
+        if (isPush && !samePlace(before, path + loc.search)) prevPath = before;
         hooks.onPathChange(path);
       }
       // block/redirect: swallow (inert). Native URL observation is the backstop
-      // if the site renders the filtered view anyway.
-      else if (d.action === "redirect" && d.byMode) leaveTo(d.to);
+      // if the site renders the filtered view anyway. A mode's way out, or a redirect marked
+      // navigateInApp, goes to its target: the site may already be rendering the swallowed page.
+      else if (d.action === "redirect" && (d.byMode || d.navigateInApp)) leaveTo(d.to);
     };
 
   history.pushState = wrap(origPush, true);
@@ -223,7 +254,7 @@ export function installRouter(getRules: () => ActiveRules, hooks: RouterHooks): 
 
   const check = () => {
     const path = location.pathname;
-    const d = evaluateRoute(path, getRules());
+    const d = evaluateRoute(path, getRules(), location.search);
     report(path, d);
     if (d.action === "redirect") navigate(d.to);
     else if (d.action === "block") navigate(getRules().mode?.home ?? "/");
@@ -239,9 +270,10 @@ export function installRouter(getRules: () => ActiveRules, hooks: RouterHooks): 
     if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
     const a = (e.target as Element | null)?.closest?.("a[href]") as HTMLAnchorElement | null;
     if (!a) return;
-    const path = toPathname(a.getAttribute("href"));
-    if (path === null) return;
-    const d = evaluateRoute(path, getRules());
+    const loc = toLocation(a.getAttribute("href"));
+    if (loc === null) return;
+    const { path } = loc;
+    const d = evaluateRoute(path, getRules(), loc.search);
     if (d.action === "allow") return;
     // Inert: stay where the user is...
     e.preventDefault();
@@ -251,6 +283,9 @@ export function installRouter(getRules: () => ActiveRules, hooks: RouterHooks): 
     // a thread's back button links to the other person's profile, and the inbox is
     // where "back" should land.
     if (d.action === "redirect" && d.byMode) leaveTo(d.to);
+    // A tap was stopped before the site saw it, so if we're already at the target there's
+    // nothing to fix: stay (e.g. Home on the Following feed).
+    else if (d.action === "redirect" && d.navigateInApp && !samePlace(here(), d.to)) leaveTo(d.to);
   };
 
   addEventListener("popstate", onPop);

@@ -10,17 +10,19 @@ import {
   type RouterHandle,
 } from "../src/core/router";
 import type { BridgeEvent } from "../src/core/types";
-import { config, settings } from "./helpers";
+import { config, loadPack, settings } from "./helpers";
 
 const normal = compile(config());
 const withComments = compile(config({ settings: settings({ features: { hideComments: true, hideStories: true } }) }));
 const dms = compile(config({ settings: settings({ mode: "dmsOnly" }) }));
 const saved = compile(config({ settings: settings({ mode: "savedOnly" }), username: "alice" }));
 const savedUnknown = compile(config({ settings: settings({ mode: "savedOnly" }) }));
+const noFollowing = compile(config({ settings: settings({ features: { hideSuggested: false } }) }));
+/** Where "/" goes while Block suggested posts is on (the default). */
+const FOLLOWING = "/?variant=following";
 
 describe("evaluateRoute (instagram)", () => {
   it.each([
-    ["/", "allow"],
     ["/direct/inbox/", "allow"],
     ["/alice/", "allow"],
     ["/p/ABC123/", "allow"],
@@ -30,7 +32,8 @@ describe("evaluateRoute (instagram)", () => {
   });
 
   it("redirects the Reels tab home but lets a single (shared) reel open", () => {
-    expect(evaluateRoute("/reels/", normal)).toMatchObject({ action: "redirect", to: "/" });
+    expect(evaluateRoute("/reels/", normal)).toMatchObject({ action: "redirect", to: FOLLOWING });
+    expect(evaluateRoute("/reels/", noFollowing)).toMatchObject({ action: "redirect", to: "/" });
     expect(evaluateRoute("/reel/XYZ/", normal).action).toBe("allow");
     expect(evaluateRoute("/someone/reel/XYZ/", normal).action).toBe("allow");
   });
@@ -39,11 +42,11 @@ describe("evaluateRoute (instagram)", () => {
     expect(evaluateRoute("/explore/", normal).action).toBe("allow");
     expect(evaluateRoute("/explore/search/", normal).action).toBe("allow");
     expect(evaluateRoute("/explore/tags/cats/", normal)).toMatchObject({ action: "block" });
-    expect(evaluateRoute("/explore/people/", normal)).toMatchObject({ action: "redirect", to: "/" });
+    expect(evaluateRoute("/explore/people/", normal)).toMatchObject({ action: "redirect", to: FOLLOWING });
   });
 
   it("uses capture groups in redirects", () => {
-    expect(evaluateRoute("/stories/bob/123/", withComments)).toMatchObject({ action: "redirect", to: "/" });
+    expect(evaluateRoute("/stories/bob/123/", withComments)).toMatchObject({ action: "redirect", to: FOLLOWING });
     const r = compile(config());
     r.routes.unshift({ id: "t", pattern: /^\/x\/([^/]+)\//, action: "redirect", to: "/y/$1/" });
     expect(evaluateRoute("/x/abc/", r)).toMatchObject({ action: "redirect", to: "/y/abc/" });
@@ -82,6 +85,42 @@ describe("evaluateRoute (instagram)", () => {
   it("Saved only without a known username: stays on / until identity resolves", () => {
     expect(evaluateRoute("/", savedUnknown).action).toBe("allow");
     expect(evaluateRoute("/direct/inbox/", savedUnknown)).toMatchObject({ action: "redirect", to: "/" });
+  });
+});
+
+describe("Following feed (Block suggested posts)", () => {
+  it("sends the main feed to the Following feed, also on in-app navigation", () => {
+    expect(evaluateRoute("/", normal)).toMatchObject({ action: "redirect", to: FOLLOWING, navigateInApp: true });
+    expect(evaluateRoute("/", normal, "?variant=home")).toMatchObject({ action: "redirect", to: FOLLOWING });
+  });
+
+  it("leaves the Following and Favorites feeds alone", () => {
+    expect(evaluateRoute("/", normal, "?variant=following").action).toBe("allow");
+    expect(evaluateRoute("/", normal, "?variant=favorites").action).toBe("allow");
+    expect(evaluateRoute("/", normal, "?x=1&variant=following").action).toBe("allow");
+  });
+
+  it("is off with the filter, and modes still win", () => {
+    expect(evaluateRoute("/", noFollowing).action).toBe("allow");
+    expect(evaluateRoute("/", dms)).toMatchObject({ action: "redirect", to: "/direct/inbox/", byMode: true });
+  });
+
+  it("drops a rule whose search pattern doesn't compile", () => {
+    const errors: string[] = [];
+    const pack = loadPack("instagram");
+    pack.features.hideSuggested!.rules.routes![0]!.search = "(";
+    const r = compile(config({}, pack), (m) => errors.push(m));
+    expect(evaluateRoute("/", r).action).toBe("allow");
+    expect(errors.some((e) => e.includes("invalid regex"))).toBe(true);
+  });
+
+  it("stops following a redirect chain that loops", () => {
+    const r = compile(config({ settings: settings({ features: { hideSuggested: false } }) }));
+    r.routes.unshift(
+      { id: "a", pattern: /^\/a\/$/, action: "redirect", to: "/b/" },
+      { id: "b", pattern: /^\/b\/$/, action: "redirect", to: "/a/" },
+    );
+    expect(evaluateRoute("/a/", r).action).toBe("redirect");
   });
 });
 
@@ -153,7 +192,7 @@ describe("installRouter", () => {
 
   beforeEach(() => {
     resetLoopBreaker();
-    history.replaceState(null, "", "/");
+    history.replaceState(null, "", FOLLOWING);
   });
   afterEach(() => {
     handle?.uninstall();
@@ -286,7 +325,73 @@ describe("installRouter", () => {
   it("loading a filtered page directly redirects with replace", () => {
     history.replaceState(null, "", "/reels/");
     install();
-    expect(navs).toEqual(["https://www.instagram.com/"]);
+    expect(navs).toEqual(["https://www.instagram.com/?variant=following"]);
+  });
+
+  describe("the Home button with the Following feed", () => {
+    let backs: number;
+    const installHome = () => {
+      navs = [];
+      events = [];
+      backs = 0;
+      handle = installRouter(() => normal, {
+        onPathChange: () => {},
+        report: (e) => events.push(e),
+        replace: (h) => navs.push(h),
+        back: () => {
+          backs++;
+          history.replaceState(null, "", FOLLOWING);
+        },
+        backTimeoutMs: 10,
+      });
+    };
+    const tap = (href: string) => {
+      const a = document.createElement("a");
+      a.href = href;
+      document.body.appendChild(a);
+      const ev = new MouseEvent("click", { bubbles: true, cancelable: true, button: 0 });
+      a.dispatchEvent(ev);
+      a.remove();
+      return ev;
+    };
+
+    it("opening the main feed directly loads the Following feed", () => {
+      history.replaceState(null, "", "/");
+      installHome();
+      expect(navs).toEqual(["https://www.instagram.com/?variant=following"]);
+    });
+
+    it("steps back to Following when you came from it", async () => {
+      installHome();
+      history.pushState(null, "", "/someone/");
+      history.pushState(null, "", "/");
+      await new Promise((r) => setTimeout(r, 30));
+      expect(backs).toBe(1);
+      expect(navs).toEqual([]);
+    });
+
+    it("loads Following when you didn't come from it", () => {
+      history.replaceState(null, "", "/someone/");
+      installHome();
+      tap("/");
+      expect(backs).toBe(0);
+      expect(navs).toEqual(["https://www.instagram.com/?variant=following"]);
+    });
+
+    it("tapping Home on the Following feed does nothing", () => {
+      installHome();
+      const ev = tap("/");
+      expect(ev.defaultPrevented).toBe(true);
+      expect(navs).toEqual([]);
+      expect(backs).toBe(0);
+    });
+
+    it("switching between Following and Favorites goes through", () => {
+      installHome();
+      history.pushState(null, "", "/?variant=favorites");
+      expect(location.search).toBe("?variant=favorites");
+      expect(navs).toEqual([]);
+    });
   });
 
   it("stops forcing navigation when it detects a loop", () => {

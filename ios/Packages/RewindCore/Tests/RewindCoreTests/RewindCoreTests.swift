@@ -337,8 +337,30 @@ private func pack(revision: Int = 1, minEngine: Int = 1, platform: String = "ins
         #expect(g.evaluate(path: "/reels/") == .allow)
         // hideComments has a "block" rule for the comments page
         #expect(g.evaluate(path: "/p/abc/comments/") == .allow)
-        #expect(guarded("normal", ["hideComments": true]).evaluate(path: "/p/abc/comments/") == .navigate("/"))
-        #expect(guarded("normal", ["blockExplore": true]).evaluate(path: "/explore/tags/cats/") == .navigate("/"))
+        // Blocked pages go where the browser opens: the Following feed while suggested posts are blocked.
+        #expect(guarded("normal", ["hideComments": true]).evaluate(path: "/p/abc/comments/") == .navigate("/?variant=following"))
+        #expect(guarded("normal", ["blockExplore": true, "hideSuggested": false]).evaluate(path: "/explore/tags/cats/") == .navigate("/"))
+    }
+
+    @Test func opensOnTheFollowingFeedWhileSuggestedPostsAreBlocked() {
+        #expect(guarded().startPath == "/?variant=following")
+        #expect(guarded("normal", ["hideSuggested": false]).startPath == "/")
+        #expect(guarded("dmsOnly").startPath == "/direct/inbox/")
+        #expect(guarded("savedOnly", username: "me.here").startPath == "/me.here/saved/")
+        #expect(guarded("savedOnly").startPath == "/") // username unknown: the pack's start path
+        #expect(Platform.instagram.startURL(startPath: guarded().startPath).absoluteString
+                == "https://www.instagram.com/?variant=following")
+    }
+
+    @Test func blockRulesWithASearchPatternCheckTheQuery() throws {
+        var pack = ig
+        pack.features["hideComments"]?.rules.routes = [
+            .init(pattern: "^/x/$", search: "^\\?tab=x$", action: .block, to: nil, navigateInApp: nil),
+        ]
+        let g = RouteGuard(pack: pack, settings: PlatformSettings(features: ["hideComments": true, "hideSuggested": false]), username: nil)
+        #expect(g.evaluate(path: "/x/", query: "tab=x") == .navigate("/"))
+        #expect(g.evaluate(path: "/x/", query: "tab=y") == .allow)
+        #expect(g.evaluate(path: "/x/") == .allow)
     }
 
     @Test func alwaysAllowRoutesWin() {

@@ -79,6 +79,9 @@ targets:
         # The engine build script reads ../engine and ../rules, so Xcode's script sandbox must be off.
         ENABLE_USER_SCRIPT_SANDBOXING: NO
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        # Brand teal from the icon and shield. Light #2A6B78: 6.0:1 on white and behind white text. Dark #3A929F:
+        # 4.7:1 as text on dark list rows; white button labels (large semibold) get 3.6:1, like system blue.
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
 
   ShieldConfiguration:
     type: app-extension

@@ -22,7 +22,8 @@ struct OpenPlatformIntent: AppIntent {
     // `supportedModes` replaces this from iOS 26, but the app supports iOS 17.
     static let openAppWhenRun = true
 
-    @Parameter(title: "Platform")
+    // A default, so a shortcut the user builds doesn't ask which platform on every run.
+    @Parameter(title: "Platform", default: .instagram)
     var platform: ShortcutPlatform
 
     static var parameterSummary: some ParameterSummary {

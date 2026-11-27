@@ -1,4 +1,3 @@
-import AppIntents
 import RewindCore
 import SwiftUI
 
@@ -145,21 +144,24 @@ private struct UsernameSection: View {
 }
 
 /// How to put "Open <platform> in Social Rewind" on the Home Screen. The app can't add the icon
-/// itself: only the Shortcuts app can, so this explains the steps and links there.
+/// itself: only the Shortcuts app can, so this explains the steps and opens a new shortcut there.
+/// UNVERIFIED (roadmap 0.7): the labels below match what Shortcuts shows.
 private struct HomeScreenShortcutSection: View {
+    @Environment(\.openURL) private var openURL
     let platform: Platform
+
+    /// Documented in Apple's Shortcuts User Guide ("Run a shortcut from a URL"): opens a new, empty shortcut.
+    private static let newShortcutURL = URL(string: "shortcuts://create-shortcut")!
 
     var body: some View {
         Section {
             VStack(alignment: .leading, spacing: 6) {
-                Text("1. In Shortcuts, tap **+** to make a new shortcut.")
-                Text("2. Search for **Social Rewind** and pick **Open \(platform.displayName) in Social Rewind**.")
-                Text("3. Tap the shortcut's name at the top, then **Add to Home Screen**. You can choose its name and icon.")
+                Text("1. Tap **New shortcut** below.")
+                Text("2. Search for **Social Rewind** and add its **Open in Social Rewind** action. Check that it says \(platform.displayName).")
+                Text("3. Open the menu under the shortcut's name at the top and choose **Add to Home Screen**. You can pick its name and icon there.")
             }
             .font(.subheadline)
-            ShortcutsLink()
-                .shortcutsLinkStyle(.automaticOutline)
-                .frame(maxWidth: .infinity)
+            Button("New shortcut") { openURL(Self.newShortcutURL) }
         } header: {
             Text("Home Screen shortcut")
         } footer: {

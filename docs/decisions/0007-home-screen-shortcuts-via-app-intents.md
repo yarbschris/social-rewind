@@ -16,7 +16,7 @@ Options considered:
 - `SocialRewindShortcuts` registers it as an App Shortcut, so "Open Instagram in Social Rewind" appears in Shortcuts, Spotlight and Siri without any setup.
 - `ShortcutPlatform` lists available platforms by hand, because App Intents reads enum cases at build time. **Add a case when a platform becomes available.**
 - `DeepLinkRouter` is the single entry for links from outside SwiftUI (notifications and intents). It holds a link that arrives on a cold launch until the model exists.
-- Each platform's settings explain how to add the shortcut to the Home Screen and link to the Shortcuts app (`ShortcutsLink`).
+- Each platform's settings explain how to add the shortcut to the Home Screen and open a new shortcut in the Shortcuts app (`shortcuts://create-shortcut`).
 
 ## Consequences
 - Social Rewind ships no platform artwork. Users pick their own name and icon in Shortcuts.

@@ -4,7 +4,7 @@
 ┌──────────────── Social Rewind (SwiftUI app) ────────────────┐
 │ Onboarding · Platform settings · Stats                       │
 │                                                              │
-│ PlatformBrowser (one WKWebView per platform)                 │
+│ PlatformBrowser (one WKWebView per platform, kept alive)     │
 │  ├─ WKWebsiteDataStore(forIdentifier:)   isolated cookies    │
 │  ├─ WKContentRuleList                    native blocking     │
 │  ├─ NavigationPolicy                     host allowlist      │
@@ -48,7 +48,7 @@ Native wraps each bundle as `(function(){ const __SR_CONFIG__ = {...}; <bundle> 
 | Counter | `core/counter.ts` | isolated | Counts each unique post once it has been ≥50% visible for 1s, and each single post, reel or story page (`counter.routes`, e.g. a post opened from DMs or Saved, or each story as it advances) the user stays on for 1s. Both use the post's ID, so a post is counted once. Always runs; `postCounter` only controls whether native shows it. |
 | Bridge | `core/bridge.ts` | isolated | Sends `ready`, `postViewed`, `routeBlocked`, `ruleHit` (debug), `identity` and `error` to native. **Native treats all of these as untrusted.** |
 
-**Route enforcement in JS is best-effort.** Native observes `webView.url`, which updates on `pushState`, and is the authoritative backstop, with its own loop breaker. Settings changes that affect routes or network filtering reload the web view. CSS/DOM-only changes are pushed live into the isolated world.
+**Route enforcement in JS is best-effort.** Native observes `webView.url`, which updates on `pushState`, and is the authoritative backstop, with its own loop breaker. Each platform's web view is kept between opens (ADR 0006); settings changed while it was closed reload it on the next open. Settings changes that affect routes or network filtering reload the web view. CSS/DOM-only changes are pushed live into the isolated world.
 
 ## Rule packs (`rules/`)
 

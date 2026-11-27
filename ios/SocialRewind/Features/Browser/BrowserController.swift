@@ -34,6 +34,8 @@ final class BrowserController {
     var reminder: Reminder?
 
     @ObservationIgnored weak var webView: WKWebView?
+    /// The scripts the web view runs. A change while the browser was closed reloads it on the next open.
+    @ObservationIgnored var installedScripts: InjectedScripts?
     /// Forwards validated engine events to the app model (stats, identity).
     @ObservationIgnored var onEvent: ((BridgeEvent) -> Void)?
     @ObservationIgnored var reminderSettings = ReminderSettings()
@@ -53,6 +55,19 @@ final class BrowserController {
 
     init(platform: Platform) {
         self.platform = platform
+    }
+
+    /// The browser opened, possibly on a kept page: the session counter and reminders start over.
+    /// The page's engine still remembers posts from earlier visits, so those don't count again.
+    func beginVisit() {
+        sessionPosts = 0
+        sessionMinutes = 0
+        seenKeys.removeAll()
+        reminder = nil
+        lastBlockedPath = nil
+        // A tripped loop breaker used to clear with a new page on every open; keep that.
+        routeEnforcementDisabled = false
+        forcedNavigationLimiter.reset()
     }
 
     // MARK: Engine events
@@ -161,9 +176,13 @@ final class BrowserController {
     func apply(_ scripts: InjectedScripts, liveUpdate: String?, reload: Bool) {
         guard let webView else { return }
         scripts.install(in: webView.configuration.userContentController)
+        installedScripts = scripts
         if reload {
             routeEnforcementDisabled = false
             forcedNavigationLimiter.reset()
+            // Cover the page now, not when WebKit reports the navigation: the page on screen
+            // still runs the old filters until the reload starts.
+            navigationStarted()
             webView.reload()
         } else if let liveUpdate {
             webView.evaluateJavaScript(liveUpdate, in: nil, in: InjectedScripts.isolatedWorld, completionHandler: nil)

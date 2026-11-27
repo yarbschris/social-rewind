@@ -238,6 +238,19 @@ private func pack(revision: Int = 1, minEngine: Int = 1, platform: String = "ins
                      username: username, debug: debug, experimental: false)
     }
 
+    /// A kept web view reloads when its scripts differ from a fresh build, so the same inputs
+    /// must give byte-identical scripts.
+    @Test func sameConfigWrapsIdentically() throws {
+        let first = try LoadedRulePack(data: try instagramPackData())
+        let second = try LoadedRulePack(data: try instagramPackData())
+        let a = try EngineConfigBuilder.wrap(bundleSource: "x", config: config(first, username: "someone"))
+        let b = try EngineConfigBuilder.wrap(bundleSource: "x", config: config(second, username: "someone"))
+        #expect(a == b)
+        var stricter = PlatformSettings()
+        stricter.grayscale.toggle()
+        #expect(try EngineConfigBuilder.wrap(bundleSource: "x", config: config(first, settings: stricter)) != a)
+    }
+
     @Test func wrapsBundleInClosureWithConfigConstant() throws {
         let loaded = try LoadedRulePack(data: try instagramPackData())
         let wrapped = try EngineConfigBuilder.wrap(bundleSource: "console.log(__SR_CONFIG__.platform);",

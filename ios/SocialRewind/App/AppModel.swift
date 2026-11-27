@@ -26,6 +26,8 @@ final class AppModel {
 
     /// The platform shown full screen in a filtered browser.
     var openPlatform: Platform?
+    /// Each platform's web view, kept between opens.
+    @ObservationIgnored let browserSessions = BrowserSessionStore()
 
     /// Optional PIN for changes that loosen restrictions. nil = off.
     private(set) var settingsPin: SettingsPin?

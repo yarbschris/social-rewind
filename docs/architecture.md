@@ -28,6 +28,7 @@
 - **ShieldConfiguration** extension: a custom shield screen ("Open with Social Rewind").
 - **ShieldAction** extension: it can't open our app directly. It posts a local notification that deep-links to `socialrewind://open/<platform>`. *(Spike 0.4 verifies this.)*
 - **DeviceActivityMonitor**: reserved for sleep mode and time limits.
+- **App Shortcuts** (in the app target, not an extension): `OpenPlatformIntent` opens the same deep link, so users can put a platform on the Home Screen through the Shortcuts app or open it with Siri. Notifications and intents both go through `DeepLinkRouter`. See [ADR 0007](decisions/0007-home-screen-shortcuts-via-app-intents.md).
 
 ## Filter engine (`engine/`)
 

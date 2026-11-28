@@ -64,26 +64,16 @@ struct RootView: View {
 
 /// Handles taps on the "Open in Social Rewind" notification posted by the ShieldAction extension.
 final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate {
-    private weak var model: AppModel?
-    /// A deep link that arrived before SwiftUI attached the model (cold launch from a notification).
-    private var pendingURL: URL?
-
     func application(_ application: UIApplication,
                      didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
         UNUserNotificationCenter.current().delegate = self
         return true
     }
 
+    /// Links that arrived before SwiftUI created the model (a cold launch from a notification or a
+    /// shortcut) wait in the router until now.
     func attach(_ model: AppModel) {
-        self.model = model
-        if let url = pendingURL {
-            pendingURL = nil
-            model.handle(url: url)
-        }
-    }
-
-    private func open(_ url: URL) {
-        if let model { model.handle(url: url) } else { pendingURL = url }
+        DeepLinkRouter.shared.attach(model)
     }
 
     // Completion-handler versions, not the async ones: iOS may call these off the main thread, and
@@ -95,7 +85,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         let link = (response.notification.request.content.userInfo[NotificationKeys.url] as? String).flatMap(URL.init(string:))
         nonisolated(unsafe) let done = completionHandler
         Task { @MainActor in
-            if let link { self.open(link) }
+            if let link { DeepLinkRouter.shared.open(link) }
             done()
         }
     }

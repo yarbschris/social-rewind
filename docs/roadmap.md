@@ -9,6 +9,7 @@ Legend: ✅ done · 🚧 in progress · ⬜ not started · ❓ needs a decision 
 - ❓ 0.4 Shield → notification → `socialrewind://` deep-link handoff works.
 - ❓ 0.5 Does `shield.webDomains` / the web content filter for instagram.com (which would stop Safari bypass) also block our own `WKWebView`?
 - ❓ 0.6 Which Instagram features appear on mobile web at all: reposts, AI info labels, story ads.
+- ❓ 0.7 Home Screen shortcut (ADR 0007): the settings steps work, and the shortcut opens the filtered view directly. Also try a "When Instagram is opened" personal automation as a way around the notification step.
 
 ## Phase 1: Instagram MVP
 - ✅ Repository, license, docs

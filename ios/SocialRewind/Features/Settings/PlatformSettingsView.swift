@@ -58,6 +58,10 @@ struct PlatformSettingsView: View {
                 ReminderControls()
             }
 
+            if ShortcutPlatform(rawValue: platform.rawValue) != nil {
+                HomeScreenShortcutSection(platform: platform)
+            }
+
             Section {
                 Button("Trouble signing in?") { showSignInHelp = true }
             } footer: {
@@ -136,6 +140,33 @@ private struct UsernameSection: View {
     private func save() {
         guard draft != (model.username(for: platform) ?? "") else { return }
         invalid = !model.setUsername(draft, for: platform)
+    }
+}
+
+/// How to put "Open <platform> in Social Rewind" on the Home Screen. The app can't add the icon
+/// itself: only the Shortcuts app can, so this explains the steps and opens a new shortcut there.
+/// UNVERIFIED (roadmap 0.7): the labels below match what Shortcuts shows.
+private struct HomeScreenShortcutSection: View {
+    @Environment(\.openURL) private var openURL
+    let platform: Platform
+
+    /// Documented in Apple's Shortcuts User Guide ("Run a shortcut from a URL"): opens a new, empty shortcut.
+    private static let newShortcutURL = URL(string: "shortcuts://create-shortcut")!
+
+    var body: some View {
+        Section {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("1. Tap **New shortcut** below.")
+                Text("2. Search for **Social Rewind** and add its **Open in Social Rewind** action. Check that it says \(platform.displayName).")
+                Text("3. Open the menu under the shortcut's name at the top and choose **Add to Home Screen**. You can pick its name and icon there.")
+            }
+            .font(.subheadline)
+            Button("New shortcut") { openURL(Self.newShortcutURL) }
+        } header: {
+            Text("Home Screen shortcut")
+        } footer: {
+            Text("Put \(platform.displayName) on your Home Screen so it opens here. You can also say “Open \(platform.displayName) in Social Rewind” to Siri, or use it with the Action button.")
+        }
     }
 }
 

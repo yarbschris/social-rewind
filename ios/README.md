@@ -63,7 +63,7 @@ If `app.socialrewind` isn't registered to your team, set `SR_BUNDLE_PREFIX` in `
 
 ## How a session works
 
-1. The user opens Instagram and sees the shield. Tapping **Open in Social Rewind** makes the ShieldAction extension post a notification. Tapping that opens `socialrewind://open/instagram`.
+1. The user opens Instagram and sees the shield. Tapping **Open in Social Rewind** makes the ShieldAction extension post a notification. Tapping that opens `socialrewind://open/instagram`. A Home Screen shortcut, Siri or Spotlight runs `OpenPlatformIntent` instead, which opens the same link ([ADR 0007](../docs/decisions/0007-home-screen-shortcuts-via-app-intents.md)).
 2. `PlatformBrowserView` creates a `WKWebView` with:
    - a persistent, per-platform `WKWebsiteDataStore(forIdentifier:)`;
    - **two** document-start user scripts, each wrapped as `(function(){"use strict";const __SR_CONFIG__ = {...};<bundle>})();` by `EngineConfigBuilder.wrap`, so there's no global for the page to read:
